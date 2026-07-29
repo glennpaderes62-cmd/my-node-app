@@ -3,7 +3,7 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// View engine setup
 app.set('view engine', 'ejs');
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
@@ -12,11 +12,10 @@ app.use(session({
     saveUninitialized: true
 }));
 
-// Dummy user para sa demo
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "12345";
 
-// Login Page (GET)
+// Login Page
 app.get('/', (req, res) => {
     if (req.session.user) {
         return res.redirect('/dashboard');
@@ -24,7 +23,7 @@ app.get('/', (req, res) => {
     res.render('login');
 });
 
-// Login Process (POST)
+// Login POST
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
     if (username === ADMIN_USER && password === ADMIN_PASS) {
@@ -35,7 +34,7 @@ app.post('/login', (req, res) => {
     }
 });
 
-// Dashboard (Protected Route)
+// Dashboard
 app.get('/dashboard', (req, res) => {
     if (!req.session.user) {
         return res.redirect('/');
