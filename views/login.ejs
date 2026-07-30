@@ -3,28 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RxPOS - Pharmacy Login</title>
+    <title>RxPOS - Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Poppins', sans-serif; background-color: #eef2f7; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-card { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 380px; text-align: center; }
-        h2 { color: #0e6251; margin-bottom: 25px; }
-        input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
-        button { width: 100%; padding: 12px; background: #1abc9c; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 16px; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #16a085; }
-        .error { color: #e74c3c; font-size: 0.85rem; margin-bottom: 15px; }
+        body { font-family: 'Poppins', sans-serif; background-color: #f1f5f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 350px; border: 1px solid #e2e8f0; }
+        .login-card h2 { margin-top: 0; color: #1e293b; text-align: center; margin-bottom: 20px; }
+        .form-control { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; }
+        .btn-login { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 1rem; }
+        .btn-login:hover { background: #1d4ed8; }
+        .error-msg { color: #ef4444; font-size: 0.85rem; text-align: center; margin-bottom: 15px; }
     </style>
 </head>
 <body>
     <div class="login-card">
-        <h2>RxPOS Pharmacy</h2>
+        <h2>💊 RxPOS Login</h2>
         <% if (error) { %>
-            <p class="error"><%= error %></p>
+            <div class="error-msg"><%= error %></div>
         <% } %>
         <form action="/login" method="POST">
-            <input type="text" name="username" placeholder="Username (pharmacist)" required>
-            <input type="password" name="password" placeholder="Password (12345)" required>
-            <button type="submit">Mag-log In</button>
+            <input type="text" name="username" class="form-control" placeholder="Username" required autofocus>
+            <input type="password" name="password" class="form-control" placeholder="Password" required>
+            <button type="submit" class="btn-login">Log In</button>
         </form>
     </div>
 </body>

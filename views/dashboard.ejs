@@ -3,178 +3,365 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RxPOS - Odoo Style POS</title>
+    <title>RxPOS - Enterprise Pharmacy System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background-color: #f1f5f9; color: #1e293b; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* Top Navigation Bar */
-        .pos-header { background: #2c3e50; color: white; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; height: 50px; }
+        .pos-header { background: #2c3e50; color: white; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; height: 50px; flex-shrink: 0; }
         .pos-header h2 { margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
         .pos-header .user-info { font-size: 0.9rem; display: flex; gap: 15px; align-items: center; }
         .pos-header a { color: #e74c3c; text-decoration: none; font-weight: 600; }
 
-        /* Main Workspace Layout */
-        .pos-container { display: flex; flex: 1; height: calc(100vh - 50px); overflow: hidden; }
+        .app-layout { display: flex; flex: 1; height: calc(100vh - 50px); overflow: hidden; }
+        .sidebar { width: 220px; background: #1e293b; color: #94a3b8; display: flex; flex-direction: column; border-right: 1px solid #334155; }
+        .sidebar-title { padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 400; }
+        .menu-item { padding: 12px 20px; color: #cbd5e1; text-decoration: none; font-size: 0.9rem; font-weight: 400; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; border-left: 4px solid transparent; }
+        .menu-item:hover { background: #334155; color: #fff; }
+        .menu-item.active { background: #334155; color: #38bdf8; border-left-color: #38bdf8; font-weight: 500; }
 
-        /* Left Panel: Cart & Keypad */
+        .content-area { flex: 1; display: flex; overflow: hidden; position: relative; }
+        .module-pane { display: none; width: 100%; height: 100%; overflow: hidden; }
+        .module-pane.active { display: flex; }
+
+        .pos-main-container { display: flex; width: 100%; height: 100%; }
         .left-panel { width: 42%; background: #ffffff; border-right: 1px solid #cbd5e1; display: flex; flex-direction: column; justify-content: space-between; }
         .cart-section { flex: 1; overflow-y: auto; padding: 15px; }
         .cart-table { width: 100%; border-collapse: collapse; }
-        .cart-table th, .cart-table td { padding: 8px; text-align: left; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+        .cart-table th, .cart-table td { padding: 8px; text-align: left; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; cursor: pointer; }
         .cart-table th { color: #64748b; font-size: 0.8rem; text-transform: uppercase; }
+        .cart-table tr.selected { background-color: #e0f2fe; }
 
         .cart-summary { background: #f8fafc; padding: 15px; border-top: 1px solid #e2e8f0; }
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 1rem; }
         .summary-row.total { font-size: 1.3rem; font-weight: bold; color: #0f172a; }
 
-        /* Touch Keypad */
         .keypad-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px; background: #e2e8f0; border-top: 1px solid #cbd5e1; }
-        .key-btn { background: #ffffff; border: 1px solid #cbd5e1; padding: 12px; font-size: 1.1rem; font-weight: 600; border-radius: 6px; cursor: pointer; text-align: center; transition: 0.1s; }
+        .key-btn { background: #ffffff; border: 1px solid #cbd5e1; padding: 12px; font-size: 1.1rem; font-weight: 500; border-radius: 6px; cursor: pointer; text-align: center; }
         .key-btn:active { background: #cbd5e1; }
         .key-btn.action { background: #3b82f6; color: white; border: none; }
-        .key-btn.payment { background: #10b981; color: white; border: none; grid-column: span 4; font-size: 1.2rem; padding: 14px; }
+        .key-btn.action.active-mode { background: #1d4ed8; outline: 2px solid #93c5fd; }
+        .key-btn.payment { background: #10b981; color: white; border: none; grid-column: span 4; font-size: 1.2rem; padding: 14px; font-weight: 600; }
 
-        /* Right Panel: Categories & Products */
         .right-panel { width: 58%; display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; }
-        
-        .categories-bar { display: flex; gap: 10px; padding: 15px; background: #ffffff; border-bottom: 1px solid #e2e8f0; overflow-x: auto; }
-        .cat-btn { background: #e2e8f0; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 500; cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
+        .categories-bar { display: flex; gap: 10px; padding: 15px; background: #ffffff; border-bottom: 1px solid #e2e8f0; overflow-x: auto; flex-shrink: 0; }
+        .cat-btn { background: #e2e8f0; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 400; cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
         .cat-btn.active, .cat-btn:hover { background: #8b5cf6; color: white; }
 
         .products-grid-container { flex: 1; padding: 15px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; align-content: start; }
-        .product-tile { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: 0.2s; display: flex; flex-direction: column; justify-content: space-between; height: 110px; }
+        .product-tile { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: space-between; height: 110px; }
         .product-tile:hover { border-color: #8b5cf6; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .product-tile h4 { margin: 0; font-size: 0.9rem; color: #1e293b; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .product-tile h4 { margin: 0; font-size: 0.9rem; color: #1e293b; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-weight: 400; }
         .product-tile .price { color: #10b981; font-weight: 600; font-size: 0.95rem; margin: 5px 0; }
         .product-tile .stock { font-size: 0.75rem; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; align-self: center; }
 
-        /* Modal/Forms bottom drawer or compact cards */
-        .bottom-forms { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; background: #ffffff; border-top: 1px solid #e2e8f0; }
-        .mini-form input { width: 100%; padding: 6px 10px; margin-bottom: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box; }
-        .mini-form button { padding: 6px; background: #334155; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 0.8rem; font-weight: 500; }
+        .module-content { padding: 25px; width: 100%; overflow-y: auto; background: #f8fafc; }
+        .card { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.04); margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        .card h3 { margin-top: 0; color: #1e293b; font-weight: 500; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { border-bottom: 1px solid #edf2f7; padding: 10px; text-align: left; }
+        th { color: #718096; text-transform: uppercase; font-size: 0.75rem; font-weight: 500; }
+        .form-control { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem; }
+        .btn { padding: 10px 15px; background: #27ae60; color: white; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-card { background: white; padding: 25px; border-radius: 12px; width: 420px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-card h3 { margin-top: 0; color: #0f172a; margin-bottom: 15px; }
+        .modal-row { margin-bottom: 12px; }
+        .modal-row label { display: block; font-size: 0.85rem; color: #64748b; margin-bottom: 5px; }
+        .modal-row input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+        
+        .payment-methods-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+        .pay-card { background: #f8fafc; border: 2px solid #cbd5e1; border-radius: 8px; padding: 12px; text-align: center; cursor: pointer; font-weight: 600; font-size: 0.95rem; color: #475569; transition: 0.2s; }
+        .pay-card:hover { border-color: #3b82f6; }
+        .pay-card.active { background: #eff6ff; border-color: #2563eb; color: #1d4ed8; }
+
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-actions button { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+        .btn-cancel { background: #e2e8f0; color: #475569; }
+        .btn-confirm { background: #10b981; color: white; }
+
+        /* Clickable Sales History Rows */
+        .sales-row { cursor: pointer; transition: background 0.15s; }
+        .sales-row:hover { background-color: #f1f5f9; }
     </style>
 </head>
 <body>
 
-    <!-- Top Navigation Bar -->
     <div class="pos-header">
-        <h2>💊 RxPOS <span style="font-size: 0.8rem; background: #1abc9c; padding: 2px 8px; border-radius: 4px;">Odoo Style</span></h2>
+        <h2>💊 RxPOS <span style="font-size: 0.8rem; background: #1abc9c; padding: 2px 8px; border-radius: 4px; font-weight: 400;">Enterprise</span></h2>
         <div class="user-info">
             <span>Cashier: <strong><%= user %></strong></span>
             <a href="/logout">Log Out</a>
         </div>
     </div>
 
-    <!-- Main Workspace -->
-    <div class="pos-container">
+    <div class="app-layout">
         
-        <!-- LEFT PANEL: Cart, Summary, and Touch Keypad -->
-        <div class="left-panel">
-            <div class="cart-section">
-                <table class="cart-table">
+        <div class="sidebar">
+            <div class="sidebar-title">Modules</div>
+            <div class="menu-item active" onclick="switchModule('pos', this)">🛒 Point of Sale</div>
+            <div class="menu-item" onclick="switchModule('inventory', this)">📦 Imbentaryo & Produkto</div>
+            <div class="menu-item" onclick="switchModule('prescriptions', this)">📋 Reseta (Rx)</div>
+            <div class="menu-item" onclick="switchModule('sales', this)">📊 Sales History</div>
+        </div>
+
+        <div class="content-area">
+            
+            <div id="pane-pos" class="module-pane active">
+                <div class="pos-main-container">
+                    <div class="left-panel">
+                        <div class="cart-section">
+                            <table class="cart-table">
+                               <thead>
+                                    <tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr>
+                                </thead>
+                                <tbody id="cart-items"></tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <div class="cart-summary">
+                                <div class="summary-row"><span>Discount:</span><span style="color: #e11d48;">-₱<span id="cart-discount">0.00</span></span></div>
+                                <div class="summary-row total"><span>Total:</span><span style="color: #10b981;">₱<span id="cart-total">0.00</span></span></div>
+                            </div>
+                            <div class="keypad-container">
+                                <button class="key-btn" onclick="appendKey('1')">1</button>
+                                <button class="key-btn" onclick="appendKey('2')">2</button>
+                                <button class="key-btn" onclick="appendKey('3')">3</button>
+                                <button class="key-btn action" id="btn-qty" onclick="setMode('qty')">Qty</button>
+                                <button class="key-btn" onclick="appendKey('4')">4</button>
+                                <button class="key-btn" onclick="appendKey('5')">5</button>
+                                <button class="key-btn" onclick="appendKey('6')">6</button>
+                                <button class="key-btn action" id="btn-disc" onclick="setMode('disc')">Disc</button>
+                                <button class="key-btn" onclick="appendKey('7')">7</button>
+                                <button class="key-btn" onclick="appendKey('8')">8</button>
+                                <button class="key-btn" onclick="appendKey('9')">9</button>
+                                <button class="key-btn action" id="btn-price" onclick="setMode('price')">Price</button>
+                                <button class="key-btn" onclick="clearCartInput()">C</button>
+                                <button class="key-btn" onclick="appendKey('0')">0</button>
+                                <button class="key-btn" onclick="appendKey('.')">.</button>
+                                <button class="key-btn action" onclick="deleteLastInput()">⌫</button>
+                                <button class="key-btn payment" onclick="openPaymentModal()">PAYMENT / CHECKOUT</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="right-panel">
+                        <div class="categories-bar">
+                            <button class="cat-btn active">All Medicines</button>
+                            <button class="cat-btn">OTC</button>
+                            <button class="cat-btn">Prescription (Rx)</button>
+                        </div>
+                        <div class="products-grid-container">
+                            <% products.forEach(p => { %>
+                                <div class="product-tile" onclick="addToCart('<%= p.id %>', '<%= p.name %>', <%= p.price %>, <%= p.stock %>, '<%= p.requires_prescription %>')">
+                                    <h4><%= p.name %></h4>
+                                    <div class="price">₱<%= p.price.toFixed(2) %></div>
+                                    <div class="stock">Stock: <%= p.stock %></div>
+                                </div>
+                            <% }) %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pane-inventory" class="module-pane">
+                <div class="module-content">
+                    <div class="card" style="max-width: 600px; margin: 0 auto;">
+                        <h3>Magdagdag ng Bagong Produkto</h3>
+                        <form action="/add-product" method="POST">
+                            <input type="text" name="name" class="form-control" placeholder="Pangalan ng Gamot" required>
+                            <input type="text" name="category" class="form-control" placeholder="Kategorya (OTC / Prescription)" required>
+                            <input type="number" step="0.01" name="price" class="form-control" placeholder="Presyo (₱)" required>
+                            <input type="number" name="stock" class="form-control" placeholder="Dami ng Stock" required>
+                            <input type="text" name="batch_no" class="form-control" placeholder="Batch / Lot Number" required>
+                            <input type="date" name="expiry_date" class="form-control" required>
+                            <label style="font-size: 0.9rem; display: block; margin-bottom: 15px;"><input type="checkbox" name="requires_prescription" value="1"> Kailangan ng Reseta (Rx)?</label>
+                            <button type="submit" class="btn" style="background: #8e44ad; width: 100%;">I-save sa Imbentaryo</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pane-prescriptions" class="module-pane">
+                <div class="module-content">
+                    <div class="card" style="max-width: 600px; margin: 0 auto 20px auto;">
+                        <h3>I-validate at I-save ang Reseta (Rx)</h3>
+                        <form action="/add-prescription" method="POST">
+                            <input type="text" name="patient_name" class="form-control" placeholder="Pangalan ng Pasyente" required>
+                            <input type="text" name="doctor_name" class="form-control" placeholder="Pangalan ng Doktor" required>
+                            <input type="text" name="medicine_name" class="form-control" placeholder="Resetang Gamot" required>
+                            <button type="submit" class="btn" style="background: #2980b9; width: 100%;">I-save ang Reseta</button>
+                        </form>
+                    </div>
+                    <div class="card" style="max-width: 800px; margin: 0 auto;">
+                        <h3>Mga Nakaraang Reseta</h3>
+                        <table>
+                            <thead><tr><th>ID</th><th>Pasyente</th><th>Doktor</th><th>Gamot</th><th>Petsa</th></tr></thead>
+                            <tbody>
+                                <% prescriptions.forEach(rx => { %>
+                                    <tr>
+                                        <td>#<%= rx.id %></td>
+                                        <td><%= rx.patient_name %></td>
+                                        <td><%= rx.doctor_name %></td>
+                                        <td><%= rx.medicine_name %></td>
+                                        <td><%= rx.date %></td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pane-sales" class="module-pane">
+                <div class="module-content">
+                    <div class="card" style="max-width: 900px; margin: 0 auto;">
+                        <h3>Sales History & Logs <span style="font-size: 0.8rem; color: #64748b; font-weight: normal;">(I-click ang row para makita ang resibo)</span></h3>
+                        <table>
+                            <thead><tr><th>Sale ID</th><th>Total Amount</th><th>Cashier</th><th>Date</th></tr></thead>
+                            <tbody>
+                                <% sales.forEach(s => { %>
+                                    <tr class="sales-row" onclick='viewReceipt(<%- s.receipt_data %>)'>
+                                        <td>#<%= s.id %></td>
+                                        <td style="color: #27ae60; font-weight: bold;">₱<%= s.total.toFixed(2) %></td>
+                                        <td><%= s.cashier %></td>
+                                        <td><%= s.date %></td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="paymentModal" class="modal-overlay">
+        <div class="modal-card">
+            <h3>Payment & Checkout</h3>
+            
+            <div class="modal-row">
+                <label>Total Payable Amount</label>
+                <input type="text" id="modal-total-display" readonly style="font-weight: bold; color: #10b981; background: #f8fafc;">
+            </div>
+
+            <div class="modal-row">
+                <label>Mode of Payment (Tap to Select)</label>
+                <div class="payment-methods-grid">
+                    <div class="pay-card active" id="method-Cash" onclick="selectPaymentMethod('Cash')">Cash</div>
+                    <div class="pay-card" id="method-GCash" onclick="selectPaymentMethod('GCash')">GCash</div>
+                    <div class="pay-card" id="method-Card" onclick="selectPaymentMethod('Card')">Card</div>
+                </div>
+            </div>
+
+            <div class="modal-row" id="cash-tendered-row">
+                <label>Amount Tendered (Cash)</label>
+                <input type="number" id="modal-tendered" placeholder="0.00" oninput="computeChange()">
+            </div>
+
+            <div class="modal-row">
+                <label>Change (Sukli)</label>
+                <input type="text" id="modal-change" readonly style="font-weight: bold; color: #2563eb; font-size: 1.4rem; background: #eff6ff; text-align: right;">
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closePaymentModal()">Cancel</button>
+                <button class="btn-confirm" onclick="confirmCheckout()">Complete Payment</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REGULAR SIZE THERMAL RECEIPT MODAL (80mm standard width look) -->
+    <div id="receiptModal" class="modal-overlay">
+        <div class="modal-card" style="width: 420px; font-family: 'Courier New', Courier, monospace; max-height: 90vh; overflow-y: auto;">
+            <div id="receipt-content" style="padding: 15px; color: #000; font-size: 0.9rem; line-height: 1.5; background: #fff;">
+                <div style="text-align: center; margin-bottom: 12px;">
+                    <h2 style="margin: 0; font-size: 1.3rem; font-weight: bold;">RxPOS PHARMACY</h2>
+                    <p style="margin: 2px 0; font-size: 0.8rem;">123 Health St., Biñan Laguna</p>
+                    <p style="margin: 2px 0; font-size: 0.8rem;">VAT Reg. TIN: 000-123-456-000</p>
+                    <p style="margin: 2px 0; font-size: 0.8rem;">SN: POS-9988-PH</p>
+                </div>
+                <div style="border-bottom: 1px dashed #000; margin-bottom: 10px; padding-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between;"><span style="font-weight: bold;">Date:</span> <span id="rec-date"></span></div>
+                    <div style="display: flex; justify-content: space-between;"><span style="font-weight: bold;">Receipt No:</span> <span>#<span id="rec-id"></span></span></div>
+                    <div style="display: flex; justify-content: space-between;"><span style="font-weight: bold;">Cashier:</span> <span id="rec-cashier"></span></div>
+                </div>
+                <table style="width: 100%; font-size: 0.85rem; border-collapse: collapse;">
                     <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Qty</th>
-                            <th>Price</th>
-                            <th>Subtotal</th>
+                        <tr style="border-bottom: 1px dashed #000;">
+                            <th style="text-align: left; padding: 4px; color: #000;">Item Description</th>
+                            <th style="text-align: center; padding: 4px; color: #000;">Qty</th>
+                            <th style="text-align: right; padding: 4px; color: #000;">Price</th>
+                            <th style="text-align: right; padding: 4px; color: #000;">Total</th>
                         </tr>
                     </thead>
-                    <tbody id="cart-items">
-                        <!-- Dynamic items go here -->
-                    </tbody>
+                    <tbody id="rec-items"></tbody>
                 </table>
+                <div style="border-top: 1px dashed #000; margin-top: 10px; padding-top: 8px;">
+                    <div style="display: flex; justify-content: space-between;"><span>VATable Sales:</span> <span>₱<span id="rec-vatable">0.00</span></span></div>
+                    <div style="display: flex; justify-content: space-between;"><span>VAT Amount (12%):</span> <span>₱<span id="rec-vat">0.00</span></span></div>
+                    <div style="display: flex; justify-content: space-between;"><span>VAT-Exempt Sales:</span> <span>₱0.00</span></div>
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem; margin-top: 6px; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 0;">
+                        <span>TOTAL AMOUNT DUE:</span> <span>₱<span id="rec-total">0.00</span></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 6px;"><span>Payment Type:</span> <span id="rec-method" style="font-weight: bold;">Cash</span></div>
+                    <div style="display: flex; justify-content: space-between;"><span>Amount Tendered:</span> <span>₱<span id="rec-tendered">0.00</span></span></div>
+                    <div style="display: flex; justify-content: space-between; font-weight: bold;"><span>CHANGE:</span> <span>₱<span id="rec-change">0.00</span></span></div>
+                </div>
+                <div style="text-align: center; margin-top: 20px; font-size: 0.8rem;">
+                    <p style="margin: 2px 0; font-weight: bold;">THIS IS A COMPUTER GENERATED SALES INVOICE</p>
+                    <p style="margin: 2px 0;">*** THANK YOU, COME AGAIN! ***</p>
+                </div>
             </div>
-
-            <div>
-                <div class="cart-summary">
-                    <div class="summary-row">
-                        <span>Taxes (0%):</span>
-                        <span>₱0.00</span>
-                    </div>
-                    <div class="summary-row total">
-                        <span>Total:</span>
-                        <span style="color: #10b981;">₱<span id="cart-total">0.00</span></span>
-                    </div>
-                </div>
-
-                <!-- Odoo Style Keypad -->
-                <div class="keypad-container">
-                    <button class="key-btn" onclick="appendKey('1')">1</button>
-                    <button class="key-btn" onclick="appendKey('2')">2</button>
-                    <button class="key-btn" onclick="appendKey('3')">3</button>
-                    <button class="key-btn action">Qty</button>
-                    
-                    <button class="key-btn" onclick="appendKey('4')">4</button>
-                    <button class="key-btn" onclick="appendKey('5')">5</button>
-                    <button class="key-btn" onclick="appendKey('6')">6</button>
-                    <button class="key-btn action">Disc</button>
-                    
-                    <button class="key-btn" onclick="appendKey('7')">7</button>
-                    <button class="key-btn" onclick="appendKey('8')">8</button>
-                    <button class="key-btn" onclick="appendKey('9')">9</button>
-                    <button class="key-btn action">Price</button>
-                    
-                    <button class="key-btn" onclick="clearCart()">C</button>
-                    <button class="key-btn" onclick="appendKey('0')">0</button>
-                    <button class="key-btn" onclick="appendKey('.')">.</button>
-                    <button class="key-btn action" onclick="deleteLast()">⌫</button>
-                    
-                    <button class="key-btn payment" onclick="checkout()">PAYMENT / CHECKOUT</button>
-                </div>
+            <div class="modal-actions" style="margin-top: 15px;">
+                <button class="btn-cancel" onclick="closeReceiptModal()">Close Window</button>
+                <button class="btn-confirm" onclick="printReceipt()">Print Receipt</button>
             </div>
         </div>
-
-        <!-- RIGHT PANEL: Categories, Product Grid & Mini Forms -->
-        <div class="right-panel">
-            <!-- Categories Bar -->
-            <div class="categories-bar">
-                <button class="cat-btn active">All Medicines</button>
-                <button class="cat-btn">OTC (Over-The-Counter)</button>
-                <button class="cat-btn">Prescription (Rx)</button>
-                <button class="cat-btn">Vitamins</button>
-            </div>
-
-            <!-- Product Grid -->
-            <div class="products-grid-container">
-                <% products.forEach(p => { %>
-                    <div class="product-tile" onclick="addToCart('<%= p.id %>', '<%= p.name %>', <%= p.price %>, <%= p.stock %>, '<%= p.requires_prescription %>')">
-                        <h4><%= p.name %></h4>
-                        <div class="price">₱<%= p.price.toFixed(2) %></div>
-                        <div class="stock">Stock: <%= p.stock %></div>
-                    </div>
-                <% }) %>
-            </div>
-
-            <!-- Compact Admin/Rx Forms at Bottom -->
-            <div class="bottom-forms">
-                <div class="mini-form">
-                    <form action="/add-prescription" method="POST">
-                        <input type="text" name="patient_name" placeholder="Patient Name" required>
-                        <input type="text" name="doctor_name" placeholder="Doctor Name" required>
-                        <input type="text" name="medicine_name" placeholder="Prescribed Medicine" required>
-                        <button type="submit">Validate Rx</button>
-                    </form>
-                </div>
-                <div class="mini-form">
-                    <form action="/add-product" method="POST">
-                        <input type="text" name="name" placeholder="Medicine Name" required>
-                        <input type="number" step="0.01" name="price" placeholder="Price (₱)" required>
-                        <input type="number" name="stock" placeholder="Stock Qty" required>
-                        <input type="hidden" name="category" value="OTC">
-                        <input type="hidden" name="batch_no" value="BCH-2026">
-                        <input type="hidden" name="expiry_date" value="2028-12-31">
-                        <button type="submit" style="background: #0284c7;">+ Add Product</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <script>
+        function switchModule(moduleName, element) {
+            document.querySelectorAll('.module-pane').forEach(pane => pane.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+
+            document.getElementById('pane-' + moduleName).classList.add('active');
+            element.classList.add('active');
+        }
+
         let cart = [];
+        let selectedIndex = null;
+        let activeInputMode = 'qty';
+        let currentInputValue = '';
+        let selectedPaymentMethod = 'Cash';
+
+        function selectPaymentMethod(method) {
+            selectedPaymentMethod = method;
+            document.querySelectorAll('.pay-card').forEach(c => c.classList.remove('active'));
+            document.getElementById('method-' + method).classList.add('active');
+
+            let tenderedRow = document.getElementById('cash-tendered-row');
+            if (method !== 'Cash') {
+                tenderedRow.style.display = 'none';
+                let total = cart.reduce((sum, item) => sum + ((item.price * item.qty) - (item.discount || 0)), 0);
+                document.getElementById('modal-tendered').value = total;
+                document.getElementById('modal-change').value = '₱0.00 (Exact)';
+            } else {
+                tenderedRow.style.display = 'block';
+                document.getElementById('modal-tendered').value = '';
+                document.getElementById('modal-change').value = '₱0.00';
+                document.getElementById('modal-tendered').focus();
+            }
+        }
+
+        function setMode(mode) {
+            activeInputMode = mode;
+            currentInputValue = '';
+            document.querySelectorAll('.key-btn.action').forEach(b => b.classList.remove('active-mode'));
+            document.getElementById('btn-' + mode).classList.add('active-mode');
+        }
 
         function addToCart(id, name, price, stock, requiresRx) {
             if (requiresRx === '1') {
@@ -186,16 +373,64 @@
             }
 
             let item = cart.find(i => i.id === id);
-            let currentQty = item ? item.qty : 0;
-            if (currentQty + 1 > stock) {
-                alert('Kulang ang stock ng gamot na ito!');
-                return;
-            }
-
             if (item) {
+                if (item.qty + 1 > stock) {
+                    alert('Kulang ang stock ng gamot na ito!');
+                    return;
+                }
                 item.qty++;
             } else {
-                cart.push({ id, name, price, qty: 1 });
+                cart.push({ id, name, price, originalPrice: price, qty: 1, discount: 0 });
+            }
+            selectedIndex = cart.length - 1;
+            updateCartUI();
+        }
+
+        function selectItem(index) {
+            selectedIndex = index;
+            currentInputValue = '';
+            updateCartUI();
+        }
+
+        function appendKey(val) {
+            if (selectedIndex === null && cart.length > 0) {
+                selectedIndex = 0;
+            }
+            if (selectedIndex === null) return;
+
+            currentInputValue += val;
+            applyInputModeValue();
+        }
+
+        function deleteLastInput() {
+            if (currentInputValue.length > 0) {
+                currentInputValue = currentInputValue.slice(0, -1);
+                applyInputModeValue();
+            }
+        }
+
+        function clearCartInput() {
+            currentInputValue = '';
+            if (selectedIndex !== null) {
+                if (activeInputMode === 'qty') cart[selectedIndex].qty = 1;
+                if (activeInputMode === 'disc') cart[selectedIndex].discount = 0;
+                if (activeInputMode === 'price') cart[selectedIndex].price = cart[selectedIndex].originalPrice;
+                updateCartUI();
+            }
+        }
+
+        function applyInputModeValue() {
+            if (selectedIndex === null || currentInputValue === '') return;
+            let val = parseFloat(currentInputValue);
+            if (isNaN(val)) return;
+
+            let item = cart[selectedIndex];
+            if (activeInputMode === 'qty') {
+                item.qty = val;
+            } else if (activeInputMode === 'disc') {
+                item.discount = val;
+            } else if (activeInputMode === 'price') {
+                item.price = val;
             }
             updateCartUI();
         }
@@ -203,61 +438,125 @@
         function updateCartUI() {
             let tbody = document.getElementById('cart-items');
             let totalSpan = document.getElementById('cart-total');
+            let discountSpan = document.getElementById('cart-discount');
             tbody.innerHTML = '';
             let total = 0;
+            let totalDiscount = 0;
 
-            cart.forEach(item => {
-                let subtotal = item.price * item.qty;
-                total += subtotal;
-                tbody.innerHTML += `<tr>
+            cart.forEach((item, index) => {
+                let itemTotal = (item.price * item.qty) - item.discount;
+                total += itemTotal;
+                totalDiscount += (item.discount || 0);
+
+                let isSelected = index === selectedIndex ? 'selected' : '';
+                tbody.innerHTML += `<tr class="${isSelected}" onclick="selectItem(${index})">
                     <td>${item.name}</td>
                     <td>${item.qty}</td>
                     <td>₱${item.price.toFixed(2)}</td>
-                    <td>₱${subtotal.toFixed(2)}</td>
+                    <td>₱${itemTotal.toFixed(2)}</td>
                 </tr>`;
             });
 
             totalSpan.innerText = total.toFixed(2);
+            discountSpan.innerText = totalDiscount.toFixed(2);
         }
 
-        function clearCart() {
-            cart = [];
-            updateCartUI();
-        }
-
-        function appendKey(val) {
-            // Placeholder para sa touch numpad kung gagamitin sa pag-input ng kuwenta
-        }
-
-        function deleteLast() {
-            if (cart.length > 0) {
-                cart.pop();
-                updateCartUI();
-            }
-        }
-
-        function checkout() {
+        function openPaymentModal() {
             if (cart.length === 0) {
                 alert('Walang laman ang cart!');
                 return;
             }
+            let total = cart.reduce((sum, item) => sum + ((item.price * item.qty) - (item.discount || 0)), 0);
+            document.getElementById('modal-total-display').value = '₱' + total.toFixed(2);
+            
+            selectPaymentMethod('Cash');
+            document.getElementById('paymentModal').style.display = 'flex';
+            
+            setTimeout(() => {
+                let tenderedInput = document.getElementById('modal-tendered');
+                tenderedInput.focus();
+                tenderedInput.select();
+            }, 100);
+        }
 
-            let total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        function closePaymentModal() {
+            document.getElementById('paymentModal').style.display = 'none';
+        }
+
+        function computeChange() {
+            let total = cart.reduce((sum, item) => sum + ((item.price * item.qty) - (item.discount || 0)), 0);
+            let tendered = parseFloat(document.getElementById('modal-tendered').value) || 0;
+            let change = tendered - total;
+            document.getElementById('modal-change').value = change >= 0 ? '₱' + change.toFixed(2) : 'Kulang ang bayad';
+        }
+
+        function confirmCheckout() {
+            let total = cart.reduce((sum, item) => sum + ((item.price * item.qty) - (item.discount || 0)), 0);
+            let tendered = parseFloat(document.getElementById('modal-tendered').value) || 0;
+
+            if (selectedPaymentMethod === 'Cash' && tendered < total) {
+                alert('Kulang ang ibinigay na bayad ng customer!');
+                return;
+            }
 
             fetch('/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cart, total })
+                body: JSON.stringify({ cart, total, paymentMethod: selectedPaymentMethod, tendered })
             })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    alert('Tagumpay ang transaksyon! Sale ID: ' + data.saleId);
-                    location.reload();
+                    closePaymentModal();
+                    showReceiptModal(data.receiptData);
                 } else {
                     alert('May error: ' + data.message);
                 }
             });
+        }
+
+        function showReceiptModal(rec) {
+            document.getElementById('rec-id').innerText = rec.saleId;
+            document.getElementById('rec-date').innerText = rec.date;
+            document.getElementById('rec-cashier').innerText = rec.cashier;
+            document.getElementById('rec-vatable').innerText = rec.vatableSales.toFixed(2);
+            document.getElementById('rec-vat').innerText = rec.vatAmount.toFixed(2);
+            document.getElementById('rec-total').innerText = rec.total.toFixed(2);
+            document.getElementById('rec-method').innerText = rec.paymentMethod;
+            document.getElementById('rec-tendered').innerText = rec.tendered.toFixed(2);
+            document.getElementById('rec-change').innerText = rec.change.toFixed(2);
+
+            let tbody = document.getElementById('rec-items');
+            tbody.innerHTML = '';
+            rec.cart.forEach(item => {
+                let subtotal = (item.price * item.qty) - (item.discount || 0);
+                tbody.innerHTML += `<tr>
+                    <td>${item.name}</td>
+                    <td style="text-align:center;">${item.qty}</td>
+                    <td style="text-align:right;">${item.price.toFixed(2)}</td>
+                    <td style="text-align:right;">${subtotal.toFixed(2)}</td>
+                </tr>`;
+            });
+
+            document.getElementById('receiptModal').style.display = 'flex';
+        }
+
+        function viewReceipt(rec) {
+            showReceiptModal(rec);
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('receiptModal').style.display = 'none';
+            location.reload();
+        }
+
+        function printReceipt() {
+            let printContent = document.getElementById('receipt-content').innerHTML;
+            let originalContent = document.body.innerHTML;
+            document.body.innerHTML = printContent;
+            window.print();
+            document.body.innerHTML = originalContent;
+            location.reload();
         }
     </script>
 </body>

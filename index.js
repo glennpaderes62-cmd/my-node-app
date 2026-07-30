@@ -1,176 +1,177 @@
 const express = require('express');
-const session = require('express-session');
 const sqlite3 = require('sqlite3').verbose();
+const session = require('express-session');
+const bodyParser = require('body-parser');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 4080;
 
-// Database Setup (SQLite)
-const db = new sqlite3.Database('./pharmacy.db', (err) => {
-    if (err) {
-        console.error('Error opening database', err.message);
-    } else {
-        console.log('Connected to Pharmacy SQLite Database.');
-        createTables();
-    }
-});
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-function createTables() {
-    db.serialize(() => {
-        // Products Table na may Batch & Expiry tracking
-        db.run(`CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            category TEXT NOT NULL,
-            price REAL NOT NULL,
-            stock INTEGER NOT NULL,
-            batch_no TEXT NOT NULL,
-            expiry_date TEXT NOT NULL,
-            requires_prescription INTEGER DEFAULT 0
-        )`);
-
-        // Sales Table
-        db.run(`CREATE TABLE IF NOT EXISTS sales (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            total REAL NOT NULL,
-            cashier TEXT NOT NULL,
-            date TEXT NOT NULL
-        )`);
-
-        // Prescriptions Logging Table
-        db.run(`CREATE TABLE IF NOT EXISTS prescriptions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            patient_name TEXT NOT NULL,
-            doctor_name TEXT NOT NULL,
-            medicine_name TEXT NOT NULL,
-            date TEXT NOT NULL
-        )`);
-
-        // Default Data kung wala pang laman
-        db.get("SELECT COUNT(*) as count FROM products", (err, row) => {
-            if (row.count === 0) {
-                const stmt = db.prepare("INSERT INTO products (name, category, price, stock, batch_no, expiry_date, requires_prescription) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                stmt.run("Biogesic 500mg", "OTC", 7.50, 200, "BCH-2026-01", "2027-12-31", 0);
-                stmt.run("Amoxicillin 500mg", "Prescription", 15.00, 100, "BCH-2026-02", "2027-06-30", 1);
-                stmt.run("Neozep Non-Drowsy", "OTC", 8.00, 150, "BCH-2026-03", "2028-01-15", 0);
-                stmt.run("Losartan 50mg", "Prescription", 12.00, 80, "BCH-2026-04", "2026-10-10", 1);
-                stmt.finalize();
-            }
-        });
-    });
-}
-
-// Middleware
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
 app.use(session({
-    secret: 'pharmacy-pos-secret-key',
+    secret: 'rxpos_secure_secret_key',
     resave: false,
     saveUninitialized: true
 }));
 
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+const db = new sqlite3.Database('./pharmacy_new.db', (err) => {
+    if (err) console.error('Database connection error:', err.message);
+    else console.log('Connected to SQLite database (pharmacy.db).');
+});
 
-// Auth Guard
+db.serialize(() => {
+    db.run(`CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT,
+        role TEXT
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        category TEXT,
+        price REAL,
+        stock INTEGER,
+        batch_no TEXT,
+        expiry_date TEXT,
+        requires_prescription INTEGER DEFAULT 0
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS prescriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        patient_name TEXT,
+        doctor_name TEXT,
+        medicine_name TEXT,
+        date TEXT
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS sales (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        total REAL,
+        cashier TEXT,
+        date TEXT,
+        receipt_data TEXT
+    )`, () => {
+        // Awtomatikong idadagdag ang receipt_data kung sakaling lumang table ito
+        db.run(`ALTER TABLE sales ADD COLUMN receipt_data TEXT`, () => {});
+    });
+
+    db.get(`SELECT * FROM users WHERE username = ?`, ['pharmacist'], (err, row) => {
+        if (!row) {
+            db.run(`INSERT INTO users (username, password, role) VALUES (?, ?, ?)`, ['pharmacist', 'password123', 'pharmacist']);
+        }
+    });
+});
+
 function isAuthenticated(req, res, next) {
-    if (req.session.user) {
-        return next();
-    }
-    res.redirect('/');
+    if (req.session.user) return next();
+    res.redirect('/login');
 }
 
-// Routes
-app.get('/', (req, res) => {
-    if (req.session.user) {
-        return res.redirect('/pos');
-    }
+app.get('/login', (req, res) => {
     res.render('login', { error: null });
 });
 
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
-    if (username === 'pharmacist' && password === '12345') {
-        req.session.user = username;
-        res.redirect('/pos');
-    } else {
-        res.render('login', { error: 'Maling username o password! (Gamitin: pharmacist / 12345)' });
-    }
+    db.get(`SELECT * FROM users WHERE username = ? AND password = ?`, [username, password], (err, user) => {
+        if (user) {
+            req.session.user = user.username;
+            res.redirect('/');
+        } else {
+            res.render('login', { error: 'Invalid username or password' });
+        }
+    });
 });
 
 app.get('/logout', (req, res) => {
     req.session.destroy(() => {
-        res.redirect('/');
+        res.redirect('/login');
     });
 });
 
-// Pharmacy POS Dashboard
-app.get('/pos', isAuthenticated, (req, res) => {
-    db.all("SELECT * FROM products", (err, products) => {
-        if (err) products = [];
-        db.all("SELECT * FROM sales ORDER BY id DESC LIMIT 10", (err, sales) => {
-            if (err) sales = [];
-            db.all("SELECT * FROM prescriptions ORDER BY id DESC LIMIT 10", (err, prescriptions) => {
-                if (err) prescriptions = [];
-                res.render('dashboard', { user: req.session.user, products, sales, prescriptions });
+app.get('/', isAuthenticated, (req, res) => {
+    db.all(`SELECT * FROM products`, [], (err, products) => {
+        db.all(`SELECT * FROM prescriptions ORDER BY id DESC`, [], (err, prescriptions) => {
+            db.all(`SELECT * FROM sales ORDER BY id DESC`, [], (err, sales) => {
+                res.render('dashboard', {
+                    user: req.session.user,
+                    products: products || [],
+                    prescriptions: prescriptions || [],
+                    sales: sales || []
+                });
             });
         });
     });
 });
 
-// Add Product & Inventory Control
 app.post('/add-product', isAuthenticated, (req, res) => {
     const { name, category, price, stock, batch_no, expiry_date, requires_prescription } = req.body;
     const reqRx = requires_prescription ? 1 : 0;
-
-    db.run(
-        "INSERT INTO products (name, category, price, stock, batch_no, expiry_date, requires_prescription) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [name, category, parseFloat(price), parseInt(stock), batch_no, expiry_date, reqRx],
-        (err) => {
-            if (err) console.error(err);
-            res.redirect('/pos');
-        }
-    );
+    db.run(`INSERT INTO products (name, category, price, stock, batch_no, expiry_date, requires_prescription) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [name, category, price, stock, batch_no, expiry_date, reqRx], (err) => {
+            res.redirect('/');
+        });
 });
 
-// Validate & Save Prescription
 app.post('/add-prescription', isAuthenticated, (req, res) => {
     const { patient_name, doctor_name, medicine_name } = req.body;
-    const date = new Date().toLocaleString();
-
-    db.run(
-        "INSERT INTO prescriptions (patient_name, doctor_name, medicine_name, date) VALUES (?, ?, ?, ?)",
-        [patient_name, doctor_name, medicine_name, date],
-        (err) => {
-            if (err) console.error(err);
-            res.redirect('/pos');
-        }
-    );
+    const date = new Date().toLocaleDateString();
+    db.run(`INSERT INTO prescriptions (patient_name, doctor_name, medicine_name, date) VALUES (?, ?, ?, ?)`,
+        [patient_name, doctor_name, medicine_name, date], (err) => {
+            res.redirect('/');
+        });
 });
 
-// Checkout API with Stock Deduction & Sales Recording
 app.post('/checkout', isAuthenticated, (req, res) => {
-    const { cart, total } = req.body;
-    if (!cart || cart.length === 0) {
-        return res.json({ success: false, message: 'Walang laman ang cart.' });
-    }
-
+    const { cart, total, paymentMethod, tendered } = req.body;
+    const cashier = req.session.user || 'Cashier';
     const date = new Date().toLocaleString();
-    db.run("INSERT INTO sales (total, cashier, date) VALUES (?, ?, ?)", [total, req.session.user, date], function(err) {
-        if (err) return res.json({ success: false, message: 'Error sa pag-save ng sale.' });
 
+    const vatAmount = total * 0.12;
+    const vatableSales = total - vatAmount;
+
+    const receiptDataObj = {
+        saleId: 'TEMP',
+        date,
+        cashier,
+        cart,
+        total,
+        vatableSales,
+        vatAmount,
+        paymentMethod,
+        tendered: paymentMethod === 'Cash' ? tendered : total,
+        change: paymentMethod === 'Cash' ? tendered - total : 0
+    };
+
+    db.run(`INSERT INTO sales (total, cashier, date, receipt_data) VALUES (?, ?, ?, ?)`, 
+        [total, cashier, date, JSON.stringify(receiptDataObj)], function(err) {
+        if (err) {
+            return res.json({ success: false, message: err.message });
+        }
         const saleId = this.lastID;
-        const stmt = db.prepare("UPDATE products SET stock = stock - ? WHERE id = ?");
-        cart.forEach(item => {
-            stmt.run(item.qty, item.id);
-        });
-        stmt.finalize();
+        receiptDataObj.saleId = saleId;
 
-        res.json({ success: true, saleId });
+        db.run(`UPDATE sales SET receipt_data = ? WHERE id = ?`, [JSON.stringify(receiptDataObj), saleId]);
+
+        cart.forEach(item => {
+            db.run(`UPDATE products SET stock = stock - ? WHERE id = ?`, [item.qty, item.id]);
+        });
+
+        res.json({ 
+            success: true, 
+            saleId, 
+            receiptData: receiptDataObj
+        });
     });
 });
 
 app.listen(PORT, () => {
-    console.log(`Pharmacy POS Server running on http://localhost:${PORT}`);
+    console.log(`RxPOS server running at http://localhost:${PORT}`);
 });
