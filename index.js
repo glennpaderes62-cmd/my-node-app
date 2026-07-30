@@ -19,11 +19,12 @@ app.use(session({
     saveUninitialized: true
 }));
 
-const db = new sqlite3.Database('./pharmacy_new.db', (err) => {
+const db = new sqlite3.Database('./pharmacy.db', (err) => {
     if (err) console.error('Database connection error:', err.message);
     else console.log('Connected to SQLite database (pharmacy.db).');
 });
 
+// Database Tables Initialization
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,14 +59,51 @@ db.serialize(() => {
         date TEXT,
         receipt_data TEXT
     )`, () => {
-        // Awtomatikong idadagdag ang receipt_data kung sakaling lumang table ito
         db.run(`ALTER TABLE sales ADD COLUMN receipt_data TEXT`, () => {});
     });
 
-    db.get(`SELECT * FROM users WHERE username = ?`, ['pharmacist'], (err, row) => {
+    // New tables para sa Admin Features
+    db.run(`CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS user_permissions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        page_name TEXT
+    )`);
+
+    // Default Super Admin / Creator account
+    db.get(`SELECT * FROM users WHERE username = ?`, ['superadmin'], (err, row) => {
         if (!row) {
-            db.run(`INSERT INTO users (username, password, role) VALUES (?, ?, ?)`, ['pharmacist', 'password123', 'pharmacist']);
+            db.run(`INSERT INTO users (username, password, role) VALUES (?, ?, ?)`, ['superadmin', 'admin123', 'superadmin']);
         }
+    });
+});
+
+// Middleware para sa Maintenance Mode
+app.use((req, res, next) => {
+    if (req.path === '/login' || req.path === '/logout') {
+        return next();
+    }
+
+    db.get(`SELECT value FROM settings WHERE key = 'maintenance_mode'`, (err, row) => {
+        const isMaintenance = row && row.value === '1';
+        
+        if (isMaintenance) {
+            // Superadmin o creator lang ang makakapasok kapag naka-maintenance
+            if (req.session.user === 'superadmin' || req.session.user === 'creator') {
+                return next();
+            }
+            return res.send(`
+                <div style="text-align:center; margin-top:100px; font-family:sans-serif;">
+                    <h1>🛠️ System Under Maintenance</h1>
+                    <p>Kasalukuyang inaayos ang sistema ng creator. Mangyaring bumalik mamaya.</p>
+                </div>
+            `);
+        }
+        next();
     });
 });
 
@@ -74,6 +112,7 @@ function isAuthenticated(req, res, next) {
     res.redirect('/login');
 }
 
+// Routes
 app.get('/login', (req, res) => {
     res.render('login', { error: null });
 });
@@ -83,6 +122,7 @@ app.post('/login', (req, res) => {
     db.get(`SELECT * FROM users WHERE username = ? AND password = ?`, [username, password], (err, user) => {
         if (user) {
             req.session.user = user.username;
+            req.session.role = user.role;
             res.redirect('/');
         } else {
             res.render('login', { error: 'Invalid username or password' });
@@ -100,17 +140,57 @@ app.get('/', isAuthenticated, (req, res) => {
     db.all(`SELECT * FROM products`, [], (err, products) => {
         db.all(`SELECT * FROM prescriptions ORDER BY id DESC`, [], (err, prescriptions) => {
             db.all(`SELECT * FROM sales ORDER BY id DESC`, [], (err, sales) => {
-                res.render('dashboard', {
-                    user: req.session.user,
-                    products: products || [],
-                    prescriptions: prescriptions || [],
-                    sales: sales || []
+                db.all(`SELECT * FROM settings`, [], (err, settingsRows) => {
+                    const settings = {};
+                    if (settingsRows) {
+                        settingsRows.forEach(row => { settings[row.key] = row.value; });
+                    }
+                    
+                    res.render('dashboard', {
+                        user: req.session.user,
+                        role: req.session.role,
+                        products: products || [],
+                        prescriptions: prescriptions || [],
+                        sales: sales || [],
+                        settings: settings
+                    });
                 });
             });
         });
     });
 });
 
+// Admin Features Routes
+app.post('/admin/branding', isAuthenticated, (req, res) => {
+    const { app_name } = req.body;
+    db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('app_name', ?)`, [app_name], () => {
+        res.redirect('/');
+    });
+});
+
+app.post('/admin/maintenance', isAuthenticated, (req, res) => {
+    const { maintenance_mode } = req.body;
+    const val = maintenance_mode ? '1' : '0';
+    db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('maintenance_mode', ?)`, [val], () => {
+        res.redirect('/');
+    });
+});
+
+app.post('/admin/create-user', isAuthenticated, (req, res) => {
+    const { username, password, role, allowed_pages } = req.body;
+    
+    db.run(`INSERT INTO users (username, password, role) VALUES (?, ?, ?)`, [username, password, role], (err) => {
+        if (!err && allowed_pages) {
+            const pages = Array.isArray(allowed_pages) ? allowed_pages : [allowed_pages];
+            pages.forEach(page => {
+                db.run(`INSERT INTO user_permissions (username, page_name) VALUES (?, ?)`, [username, page]);
+            });
+        }
+        res.redirect('/');
+    });
+});
+
+// Standard POS Routes
 app.post('/add-product', isAuthenticated, (req, res) => {
     const { name, category, price, stock, batch_no, expiry_date, requires_prescription } = req.body;
     const reqRx = requires_prescription ? 1 : 0;
