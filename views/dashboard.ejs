@@ -178,7 +178,7 @@
                         </div>
                         <div class="products-grid-container">
                             <% products.forEach(p => { %>
-                                <div class="product-tile" data-product='<%= JSON.stringify({ id: p.id, name: p.name, price: p.price, stock: p.stock, requiresPrescription: p.requires_prescription }) %>' onclick="addToCartFromTile(this)">
+                                <div class="product-tile" onclick="addToCart('<%= p.id %>', '<%= p.name %>', <%= p.price %>, <%= p.stock %>, '<%= p.requires_prescription %>')">
                                     <h4><%= p.name %></h4>
                                     <div class="price">₱<%= p.price.toFixed(2) %></div>
                                     <div class="stock">Stock: <%= p.stock %></div>
@@ -216,7 +216,6 @@
                         <div style="min-width: 0;">
                             <h3>Magdagdag ng Bagong Produkto</h3>
                             <form action="/add-product" method="POST">
-                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                 <input type="text" name="name" class="form-control" placeholder="Pangalan ng Gamot" required>
                                 <input type="text" name="category" class="form-control" placeholder="Kategorya (OTC / Prescription)" required>
                                 <input type="number" step="0.01" name="price" class="form-control" placeholder="Presyo (₱)" required>
@@ -283,7 +282,6 @@
                             <h3>App Branding</h3>
                             <p style="margin-top: 0; color: #475569;">Baguhin ang pangalan ng app at logo na makikita sa header.</p>
                             <form action="/admin/branding" method="POST">
-                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                 <input type="text" name="app_name" class="form-control" placeholder="App Name" value="<%= settings.app_name || '' %>" required>
                                 <input type="url" name="app_logo_url" class="form-control" placeholder="Logo Image URL" value="<%= settings.app_logo_url || '' %>">
                                 <div style="display:flex; gap:12px; align-items:center; margin-bottom:16px;">
@@ -303,7 +301,6 @@
                             <h3>Gumawa ng User</h3>
                             <p style="margin-top: 0; color: #475569;">Magdagdag ng bagong user at piliin ang mga module na pwedeng ma-access.</p>
                             <form action="/admin/create-user" method="POST">
-                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                 <input type="text" name="username" class="form-control" placeholder="Username" required>
                                 <input type="password" name="password" class="form-control" placeholder="Password" required>
                                 <select name="role" class="form-control" required>
@@ -375,7 +372,6 @@
                             <h3>Update User Access</h3>
                             <p style="margin-top: 0; color: #475569;">Pumili ng user at piliin ang mga module na pwedeng ma-access nila.</p>
                             <form action="/admin/update-user-access" method="POST">
-                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                 <select id="user-access-select" name="username" class="form-control" required>
                                     <option value="">Piliin ang User</option>
                                     <% shownUsers.forEach(u => { %>
@@ -404,7 +400,6 @@
                     <div class="card" style="max-width: 600px; margin: 0 auto 20px auto;">
                         <h3>I-validate at I-save ang Reseta (Rx)</h3>
                         <form action="/add-prescription" method="POST">
-                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                             <input type="text" name="patient_name" class="form-control" placeholder="Pangalan ng Pasyente" required>
                             <input type="text" name="doctor_name" class="form-control" placeholder="Pangalan ng Doktor" required>
                             <input type="text" name="medicine_name" class="form-control" placeholder="Resetang Gamot" required>
@@ -441,7 +436,7 @@
                             <thead><tr><th>Sale ID</th><th>Total Amount</th><th>Cashier</th><th>Date</th></tr></thead>
                             <tbody>
                                 <% sales.forEach(s => { %>
-                                    <tr class="sales-row" data-receipt="<%= s.receipt_data || '' %>" onclick="viewReceipt(JSON.parse(this.dataset.receipt))">
+                                    <tr class="sales-row" onclick='viewReceipt(<%- s.receipt_data %>)'>
                                         <td>#<%= s.id %></td>
                                         <td style="color: #27ae60; font-weight: bold;">₱<%= s.total.toFixed(2) %></td>
                                         <td><%= s.cashier %></td>
@@ -637,11 +632,6 @@
             updateCartUI();
         }
 
-        function addToCartFromTile(tile) {
-            const product = JSON.parse(tile.dataset.product);
-            addToCart(String(product.id), product.name, Number(product.price), Number(product.stock), String(product.requiresPrescription));
-        }
-
         function selectItem(index) {
             selectedIndex = index;
             currentInputValue = '';
@@ -706,7 +696,7 @@
 
                 let isSelected = index === selectedIndex ? 'selected' : '';
                 tbody.innerHTML += `<tr class="${isSelected}" onclick="selectItem(${index})">
-                    <td>${escapeHtml(item.name)}</td>
+                    <td>${item.name}</td>
                     <td>${item.qty}</td>
                     <td>₱${item.price.toFixed(2)}</td>
                     <td>₱${itemTotal.toFixed(2)}</td>
@@ -757,7 +747,7 @@
 
             fetch('/checkout', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<%= csrfToken %>' },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ cart, total, paymentMethod: selectedPaymentMethod, tendered })
             })
             .then(res => res.json())
@@ -787,7 +777,7 @@
             rec.cart.forEach(item => {
                 let subtotal = (item.price * item.qty) - (item.discount || 0);
                 tbody.innerHTML += `<tr>
-                    <td>${escapeHtml(item.name)}</td>
+                    <td>${item.name}</td>
                     <td style="text-align:center;">${item.qty}</td>
                     <td style="text-align:right;">${item.price.toFixed(2)}</td>
                     <td style="text-align:right;">${subtotal.toFixed(2)}</td>
@@ -795,10 +785,6 @@
             });
 
             document.getElementById('receiptModal').style.display = 'flex';
-        }
-
-        function escapeHtml(value) {
-            return String(value).replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
         }
 
         function viewReceipt(rec) {
