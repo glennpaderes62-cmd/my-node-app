@@ -86,6 +86,51 @@
         /* Clickable Sales History Rows */
         .sales-row { cursor: pointer; transition: background 0.15s; }
         .sales-row:hover { background-color: #f1f5f9; }
+
+        /* Phone and tablet layout */
+        @media (max-width: 768px) {
+            body { height: auto; min-height: 100vh; overflow: auto; }
+            .pos-header { height: auto; min-height: 50px; padding: 10px 14px; gap: 8px; flex-wrap: wrap; }
+            .pos-header h2 { font-size: 1rem; min-width: 0; }
+            .pos-header h2 span:first-of-type { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 175px; }
+            .pos-header .user-info { width: 100%; justify-content: space-between; gap: 8px; font-size: 0.82rem; }
+
+            .app-layout { display: block; height: auto; overflow: visible; }
+            .sidebar { width: 100%; flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid #334155; }
+            .sidebar-title { display: none; }
+            .menu-item { flex: 0 0 auto; padding: 12px 14px; border-left: 0; border-bottom: 3px solid transparent; font-size: 0.8rem; white-space: nowrap; }
+            .menu-item.active { border-left-color: transparent; border-bottom-color: #38bdf8; }
+
+            .content-area, .module-pane, .module-pane.active { height: auto; min-height: 0; overflow: visible; }
+            .module-pane.active { display: block; }
+            .pos-main-container { display: flex; height: auto; flex-direction: column; }
+            .left-panel, .right-panel { width: 100%; box-sizing: border-box; }
+            .left-panel { border-right: 0; border-bottom: 1px solid #cbd5e1; }
+            .cart-section { max-height: 260px; min-height: 120px; }
+            .right-panel { min-height: 420px; overflow: visible; }
+            .products-grid-container { grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)); overflow: visible; }
+            .product-tile { min-height: 105px; height: auto; }
+
+            .module-content { padding: 14px; overflow: visible; box-sizing: border-box; }
+            .card { padding: 15px; margin-bottom: 14px; overflow-x: auto; }
+            table { min-width: 580px; }
+            .cart-table { min-width: 440px; }
+            .modal-overlay { align-items: flex-end; }
+            .modal-card { width: 100%; max-width: none; max-height: 90vh; overflow-y: auto; box-sizing: border-box; border-radius: 16px 16px 0 0; padding: 20px; }
+            #receiptModal .modal-card { width: 100% !important; }
+        }
+
+        @media (max-width: 420px) {
+            .pos-header h2 span:first-of-type { max-width: 125px; }
+            .pos-header h2 span:last-child { display: none; }
+            .products-grid-container { padding: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+            .categories-bar { padding: 10px; }
+            .cat-btn { padding: 8px 12px; }
+            .keypad-container { padding: 8px; }
+            .key-btn { min-height: 44px; padding: 10px 6px; }
+            .payment-methods-grid { gap: 6px; }
+            .pay-card { padding: 10px 4px; font-size: 0.85rem; }
+        }
     </style>
 </head>
 <body>
