@@ -109,6 +109,39 @@
         .eod-empty { text-align: center; color: #64748b; padding: 20px 0; }
         .eod-actions { display: flex; justify-content: center; margin-top: 16px; }
 
+        .registry-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+        .registry-header h2 { margin: 0; font-size: 1.35rem; }
+        .registry-header p { margin: 5px 0 0; color: #64748b; font-size: 0.9rem; }
+        .registry-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .registry-btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; color: #334155; font: inherit; font-size: 0.86rem; font-weight: 600; text-decoration: none; cursor: pointer; }
+        .registry-btn.primary { color: #fff; border-color: #2563eb; background: #2563eb; }
+        .registry-metrics { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
+        .registry-metric { padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; }
+        .registry-metric span { display: block; color: #64748b; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; }
+        .registry-metric strong { display: block; margin-top: 6px; color: #0f172a; font-size: 1.45rem; }
+        .registry-import { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .8fr); gap: 20px; align-items: center; }
+        .registry-dropzone { padding: 22px; border: 2px dashed #93c5fd; border-radius: 10px; background: #f8fbff; }
+        .registry-dropzone input { width: 100%; margin: 10px 0 12px; }
+        .registry-note { padding: 17px; border-radius: 10px; background: #f8fafc; color: #475569; font-size: 0.86rem; line-height: 1.55; }
+        .registry-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+        .registry-search { min-width: 240px; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; }
+        .registry-table-wrap { overflow-x: auto; }
+        .registry-table { min-width: 1050px; margin-top: 0; }
+        .registry-table th { white-space: nowrap; }
+        .registry-table .amount { text-align: right; white-space: nowrap; }
+        .registry-price-input { width: 92px; padding: 7px; border: 1px solid #cbd5e1; border-radius: 5px; font: inherit; text-align: right; }
+        .registry-update-btn { margin-left: 6px; padding: 7px 9px; border: 0; border-radius: 5px; color: #fff; background: #0f766e; cursor: pointer; font-weight: 600; }
+        .registry-status { min-height: 20px; margin: 9px 0 0; font-size: 0.86rem; color: #475569; }
+        .registry-legacy { display: none; }
+        .batch-entry-grid { display: grid; grid-template-columns: repeat(3, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; }
+        .batch-entry-grid label { display: flex; flex-direction: column; gap: 5px; color: #475569; font-size: .8rem; font-weight: 600; }
+        .batch-entry-grid input { padding: 9px; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; }
+        .batch-lines { overflow-x: auto; }
+        .batch-lines table { min-width: 980px; margin-top: 0; }
+        .batch-lines input { width: 100%; min-width: 85px; padding: 7px; border: 1px solid #cbd5e1; border-radius: 5px; box-sizing: border-box; font: inherit; }
+        .batch-remove { border: 0; border-radius: 5px; padding: 7px 9px; color: #b91c1c; background: #fef2f2; font-weight: 600; cursor: pointer; }
+        .batch-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+
         .admin-dashboard { max-width: 900px; margin: 0 auto; }
         .admin-dashboard-title { margin: 0 0 6px; font-weight: 600; }
         .admin-dashboard-subtitle { margin: 0 0 20px; color: #64748b; font-size: 0.92rem; }
@@ -152,6 +185,9 @@
             .admin-tabs { overflow-x: auto; }
             .admin-tab { flex: 0 0 auto; white-space: nowrap; }
             .admin-tab-panel { padding: 15px; }
+            .registry-metrics { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
+            .registry-import { grid-template-columns: 1fr; }
+            .batch-entry-grid { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 420px) {
@@ -272,6 +308,48 @@
             <% if (activeAllowedPages.includes('inventory')) { %>
             <div id="pane-inventory" class="module-pane <%= firstAllowedPage === 'inventory' ? 'active' : '' %>">
                 <div class="module-content">
+                    <% const registryPotentialRevenue = products.reduce((total, product) => total + ((Number(product.price) || 0) - (Number(product.cost) || 0)) * (Number(product.stock) || 0), 0); %>
+                    <div class="registry-header">
+                        <div><h2>Product Registry</h2><p>Upload a standard Excel product file, update prices strategically, and download current reports.</p></div>
+                        <div class="registry-actions"><a class="registry-btn" href="/inventory/export.xlsx">Download Excel</a><a class="registry-btn" href="/inventory/export.pdf">Download PDF</a></div>
+                    </div>
+                    <div class="registry-metrics">
+                        <div class="registry-metric"><span>Registered items</span><strong><%= inventorySummary.totalProducts %></strong></div>
+                        <div class="registry-metric"><span>Stock value</span><strong>PHP <%= inventorySummary.totalStockValue.toFixed(2) %></strong></div>
+                        <div class="registry-metric"><span>Low stock</span><strong><%= inventorySummary.lowStockCount %></strong></div>
+                        <div class="registry-metric"><span>Possible revenue</span><strong>PHP <%= registryPotentialRevenue.toFixed(2) %></strong></div>
+                    </div>
+                    <div class="card registry-import">
+                        <form id="registry-import-form" class="registry-dropzone">
+                            <h3 style="margin:0;">Mass upload products</h3><p style="margin:7px 0; color:#475569; font-size:.88rem;">Excel rows matching an existing SKU or barcode are updated. New rows are added.</p>
+                            <input id="registry-file" name="product_file" type="file" accept=".xlsx,.xls" required>
+                            <button type="submit" class="registry-btn primary">Import Product File</button><div id="registry-import-status" class="registry-status"></div>
+                        </form>
+                        <div class="registry-note"><strong>Required headers</strong><br>Item, SKU, Barcode, Description, Cost, Price, Margin %, Possible Revenue<br><br><strong>Optional:</strong> Stock.<br><br>Margin % and Possible Revenue are calculated by the system. Download Excel first for the correct column structure.</div>
+                    </div>
+                    <div class="card">
+                        <h3 style="margin:0 0 5px;">Manual Batch Entry</h3>
+                        <p style="margin:0 0 15px; color:#64748b; font-size:.88rem;">Set the batch information once, then use <strong>Add line</strong> to keep entering products under the same batch number.</p>
+                        <form id="manual-batch-form">
+                            <div class="batch-entry-grid">
+                                <label>Batch Number<input id="manual-batch-number" type="text" required placeholder="e.g. BATCH-2026-001"></label>
+                                <label>Category<input id="manual-batch-category" type="text" value="General" required></label>
+                                <label>Expiry Date<input id="manual-batch-expiry" type="date"></label>
+                            </div>
+                            <div class="batch-lines"><table><thead><tr><th>Item</th><th>SKU</th><th>Barcode</th><th>Description</th><th>Cost</th><th>Price</th><th>Stock</th><th></th></tr></thead><tbody id="manual-batch-lines"></tbody></table></div>
+                            <div class="batch-actions"><button class="registry-btn" type="button" onclick="addManualBatchLine()">+ Add line</button><button class="registry-btn primary" type="submit">Save Product Batch</button></div>
+                            <div id="manual-batch-status" class="registry-status"></div>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <div class="registry-toolbar"><div><h3 style="margin:0;">Registry List</h3><small style="color:#64748b;">Margin = (Price − Cost) ÷ Price. Possible revenue is projected profit from available stock.</small></div><input id="registry-search" class="registry-search" type="search" placeholder="Search item, SKU, barcode..." oninput="filterRegistryRows()"></div>
+                        <div class="registry-table-wrap"><table class="registry-table"><thead><tr><th>Item</th><th>SKU</th><th>Barcode</th><th>Description</th><th class="amount">Cost</th><th class="amount">Price</th><th class="amount">Margin %</th><th class="amount">Possible Revenue</th><th>Price Update</th></tr></thead><tbody id="registry-rows">
+                        <% products.forEach(product => { const cost = Number(product.cost) || 0; const price = Number(product.price) || 0; const margin = price ? ((price - cost) / price) * 100 : 0; const possibleRevenue = (price - cost) * (Number(product.stock) || 0); %>
+                            <tr data-registry-search="<%= [product.name, product.sku, product.barcode, product.description].join(' ').toLowerCase() %>"><td><strong><%= product.name %></strong><br><small style="color:#64748b;">Stock: <%= product.stock %></small></td><td><%= product.sku || '—' %></td><td><%= product.barcode || '—' %></td><td><%= product.description || '—' %></td><td class="amount">PHP <%= cost.toFixed(2) %></td><td class="amount">PHP <%= price.toFixed(2) %></td><td class="amount"><%= margin.toFixed(1) %>%</td><td class="amount">PHP <%= possibleRevenue.toFixed(2) %></td><td><input id="price-<%= product.id %>" class="registry-price-input" type="number" min="0" step="0.01" value="<%= price.toFixed(2) %>"><button class="registry-update-btn" type="button" onclick="updateRegistryPrice(<%= product.id %>)">Update</button></td></tr>
+                        <% }) %>
+                        </tbody></table></div>
+                    </div>
+                    <div class="registry-legacy" aria-hidden="true">
                     <div class="card" style="display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px;">
                         <div style="background: #eef2ff; padding: 18px; border-radius: 12px;">
                             <h3 style="margin-top:0;">Kabuuang Produkto</h3>
@@ -353,6 +431,7 @@
                     </div>
                 </div>
             </div>
+                    </div>
             <% } %>
             <% if (activeAllowedPages.includes('admin')) { %>
             <div id="pane-admin" class="module-pane <%= firstAllowedPage === 'admin' ? 'active' : '' %>">
@@ -556,6 +635,7 @@
                             <div id="eod-receipt" class="eod-receipt" aria-live="polite"></div>
                             <div class="eod-actions"><button class="btn" type="button" onclick="printEndOfDayReading()">Print Reading</button></div>
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -1019,6 +1099,51 @@
             printWindow.document.close();
             printWindow.focus();
             printWindow.print();
+        }
+
+        const registryImportForm = document.getElementById('registry-import-form');
+        if (registryImportForm) {
+            registryImportForm.addEventListener('submit', async event => {
+                event.preventDefault();
+                const status = document.getElementById('registry-import-status');
+                const fileInput = document.getElementById('registry-file');
+                if (!fileInput.files.length) return;
+                status.style.color = '#475569';
+                status.textContent = 'Reading product file...';
+                try {
+                    const response = await fetch('/inventory/import', { method: 'POST', body: new FormData(registryImportForm) });
+                    const result = await response.json();
+                    status.style.color = result.success ? '#047857' : '#b91c1c';
+                    status.textContent = result.message;
+                    if (result.success) setTimeout(() => location.reload(), 900);
+                } catch (error) {
+                    status.style.color = '#b91c1c';
+                    status.textContent = 'Upload failed. Please try again.';
+                }
+            });
+        }
+
+        async function updateRegistryPrice(productId) {
+            const input = document.getElementById(`price-${productId}`);
+            const price = Number(input.value);
+            if (!Number.isFinite(price) || price < 0) return alert('Enter a valid non-negative price.');
+            try {
+                const response = await fetch('/inventory/update-price', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId, price })
+                });
+                const result = await response.json();
+                if (!result.success) return alert(result.message);
+                location.reload();
+            } catch (error) {
+                alert('Unable to update the product price.');
+            }
+        }
+
+        function filterRegistryRows() {
+            const search = (document.getElementById('registry-search').value || '').trim().toLowerCase();
+            document.querySelectorAll('#registry-rows tr').forEach(row => {
+                row.style.display = row.dataset.registrySearch.includes(search) ? '' : 'none';
+            });
         }
 
         initializeEndOfDay();
