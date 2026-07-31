@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= settings.app_name || 'RxPOS' %> - Enterprise Pharmacy System</title>
+    <title>RxPOS - Enterprise Pharmacy System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background-color: #f1f5f9; color: #1e293b; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -91,13 +91,7 @@
 <body>
 
     <div class="pos-header">
-        <h2 style="display:flex; align-items:center; gap:10px;">
-            <% if (settings.app_logo_url) { %>
-                <img src="<%= settings.app_logo_url %>" alt="Logo" style="height:28px; width:auto; border-radius:6px; object-fit:contain; background:#fff; padding:2px;" />
-            <% } %>
-            <span><%= settings.app_name || 'RxPOS' %></span>
-            <span style="font-size: 0.8rem; background: #1abc9c; padding: 2px 8px; border-radius: 4px; font-weight: 400;">Enterprise</span>
-        </h2>
+        <h2>💊 RxPOS <span style="font-size: 0.8rem; background: #1abc9c; padding: 2px 8px; border-radius: 4px; font-weight: 400;">Enterprise</span></h2>
         <div class="user-info">
             <span>Cashier: <strong><%= user %></strong></span>
             <a href="/logout">Log Out</a>
@@ -108,31 +102,15 @@
         
         <div class="sidebar">
             <div class="sidebar-title">Modules</div>
-            <% const allPages = ['pos', 'inventory', 'prescriptions', 'sales', 'admin', 'users']; %>
-            <% let activeAllowedPages = typeof allowedPages !== 'undefined' && Array.isArray(allowedPages) ? allowedPages : []; %>
-            <% if (['superadmin', 'admin'].includes(role)) { activeAllowedPages = allPages; } %>
-            <% const firstAllowedPage = activeAllowedPages.length > 0 ? activeAllowedPages[0] : null; %>
-            <% const menuItems = [
-                { key: 'pos', label: '🛒 Point of Sale' },
-                { key: 'inventory', label: '📦 Imbentaryo & Produkto' },
-                { key: 'prescriptions', label: '📋 Reseta (Rx)' },
-                { key: 'sales', label: '📊 Sales History' },
-                { key: 'admin', label: '⚙️ Admin Branding' },
-                { key: 'users', label: '👥 User Access' }
-            ]; %>
-            <% menuItems.forEach(item => { %>
-                <% if (activeAllowedPages.includes(item.key)) { %>
-                    <div class="menu-item <%= item.key === firstAllowedPage ? 'active' : '' %>" onclick="switchModule('<%= item.key %>', this)"><%= item.label %></div>
-                <% } %>
-            <% }); %>
+            <div class="menu-item active" onclick="switchModule('pos', this)">🛒 Point of Sale</div>
+            <div class="menu-item" onclick="switchModule('inventory', this)">📦 Imbentaryo & Produkto</div>
+            <div class="menu-item" onclick="switchModule('prescriptions', this)">📋 Reseta (Rx)</div>
+            <div class="menu-item" onclick="switchModule('sales', this)">📊 Sales History</div>
         </div>
 
         <div class="content-area">
-            <% const shownUsers = typeof usersList !== 'undefined' ? usersList : []; %>
-            <% const shownPermissions = typeof userPermissions !== 'undefined' ? userPermissions : {}; %>
-            <% if (activeAllowedPages && activeAllowedPages.length > 0) { %>
-                <% if (activeAllowedPages.includes('pos')) { %>
-                    <div id="pane-pos" class="module-pane <%= firstAllowedPage === 'pos' ? 'active' : '' %>">
+            
+            <div id="pane-pos" class="module-pane active">
                 <div class="pos-main-container">
                     <div class="left-panel">
                         <div class="cart-section">
@@ -188,214 +166,26 @@
                     </div>
                 </div>
             </div>
-            <% } %>
-            <% if (activeAllowedPages.includes('inventory')) { %>
-            <div id="pane-inventory" class="module-pane <%= firstAllowedPage === 'inventory' ? 'active' : '' %>">
-                <div class="module-content">
-                    <div class="card" style="display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px;">
-                        <div style="background: #eef2ff; padding: 18px; border-radius: 12px;">
-                            <h3 style="margin-top:0;">Kabuuang Produkto</h3>
-                            <p style="font-size: 2rem; font-weight: 700; margin: 8px 0 0 0;"><%= inventorySummary.totalProducts %></p>
-                        </div>
-                        <div style="background: #f5f3ff; padding: 18px; border-radius: 12px;">
-                            <h3 style="margin-top:0;">Kabuuang Halaga ng Stock</h3>
-                            <p style="font-size: 2rem; font-weight: 700; margin: 8px 0 0 0;">₱<%= inventorySummary.totalStockValue.toFixed(2) %></p>
-                        </div>
-                        <div style="background: #ffefeb; padding: 18px; border-radius: 12px;">
-                            <h3 style="margin-top:0;">Mababang Stock</h3>
-                            <p style="font-size: 2rem; font-weight: 700; margin: 8px 0 0 0;"><%= inventorySummary.lowStockCount %></p>
-                            <small style="color: #475569;">Threshold: <%= inventorySummary.lowStockThreshold %> units</small>
-                        </div>
-                        <div style="background: #ecfdf5; padding: 18px; border-radius: 12px;">
-                            <h3 style="margin-top:0;">Reseta na Produkto</h3>
-                            <p style="font-size: 2rem; font-weight: 700; margin: 8px 0 0 0;"><%= inventorySummary.prescriptionCount %></p>
-                        </div>
-                    </div>
 
-                    <div class="card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <div style="min-width: 0;">
-                            <h3>Magdagdag ng Bagong Produkto</h3>
-                            <form action="/add-product" method="POST">
-                                <input type="text" name="name" class="form-control" placeholder="Pangalan ng Gamot" required>
-                                <input type="text" name="category" class="form-control" placeholder="Kategorya (OTC / Prescription)" required>
-                                <input type="number" step="0.01" name="price" class="form-control" placeholder="Presyo (₱)" required>
-                                <input type="number" name="stock" class="form-control" placeholder="Dami ng Stock" required>
-                                <input type="text" name="batch_no" class="form-control" placeholder="Batch / Lot Number" required>
-                                <input type="date" name="expiry_date" class="form-control" required>
-                                <label style="font-size: 0.9rem; display: block; margin-bottom: 15px;"><input type="checkbox" name="requires_prescription" value="1"> Kailangan ng Reseta (Rx)?</label>
-                                <button type="submit" class="btn" style="background: #8e44ad; width: 100%;">I-save sa Imbentaryo</button>
-                            </form>
-                        </div>
-                        <div style="min-width: 0;">
-                            <h3>Inventory Breakdown</h3>
-                            <table>
-                                <thead>
-                                    <tr><th>Kategorya</th><th>Bilang</th></tr>
-                                </thead>
-                                <tbody>
-                                    <% Object.keys(inventorySummary.categoryCounts).forEach(category => { %>
-                                        <tr>
-                                            <td><%= category %></td>
-                                            <td><%= inventorySummary.categoryCounts[category] %></td>
-                                        </tr>
-                                    <% }) %>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="card" style="margin-top: 20px;">
-                        <h3>Kasulukuyang Listahan ng Imbentaryo</h3>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Pangalan</th>
-                                    <th>Kategorya</th>
-                                    <th>Stock</th>
-                                    <th>Presyo</th>
-                                    <th>Expiry</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <% products.forEach(product => { %>
-                                    <tr style="<%= product.stock <= inventorySummary.lowStockThreshold ? 'background: #fff1f0;' : '' %>">
-                                        <td>#<%= product.id %></td>
-                                        <td><%= product.name %></td>
-                                        <td><%= product.category %></td>
-                                        <td><%= product.stock %></td>
-                                        <td>₱<%= product.price.toFixed(2) %></td>
-                                        <td><%= product.expiry_date %></td>
-                                    </tr>
-                                <% }) %>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <% } %>
-            <% if (activeAllowedPages.includes('admin')) { %>
-            <div id="pane-admin" class="module-pane <%= firstAllowedPage === 'admin' ? 'active' : '' %>">
+            <div id="pane-inventory" class="module-pane">
                 <div class="module-content">
-                    <div class="card" style="display:grid; gap:20px; max-width: 900px; margin: 0 auto;">
-                        <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #e2e8f0;">
-                            <h3>App Branding</h3>
-                            <p style="margin-top: 0; color: #475569;">Baguhin ang pangalan ng app at logo na makikita sa header.</p>
-                            <form action="/admin/branding" method="POST">
-                                <input type="text" name="app_name" class="form-control" placeholder="App Name" value="<%= settings.app_name || '' %>" required>
-                                <input type="url" name="app_logo_url" class="form-control" placeholder="Logo Image URL" value="<%= settings.app_logo_url || '' %>">
-                                <div style="display:flex; gap:12px; align-items:center; margin-bottom:16px;">
-                                    <% if (settings.app_logo_url) { %>
-                                        <div style="width:80px; height:80px; border:1px solid #cbd5e1; border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#fff;">
-                                            <img src="<%= settings.app_logo_url %>" alt="Logo preview" style="max-width:100%; max-height:100%; object-fit:contain;" />
-                                        </div>
-                                    <% } %>
-                                    <div style="color:#475569; font-size:0.95rem;">
-                                        I-paste ang logo URL para lumabas sa tuktok na header.
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn" style="background: #2563eb; width: 100%;">I-save ang Branding</button>
-                            </form>
-                        </div>
-                        <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #e2e8f0;">
-                            <h3>Gumawa ng User</h3>
-                            <p style="margin-top: 0; color: #475569;">Magdagdag ng bagong user at piliin ang mga module na pwedeng ma-access.</p>
-                            <form action="/admin/create-user" method="POST">
-                                <input type="text" name="username" class="form-control" placeholder="Username" required>
-                                <input type="password" name="password" class="form-control" placeholder="Password" required>
-                                <select name="role" class="form-control" required>
-                                    <option value="cashier">Cashier</option>
-                                    <option value="pharmacist">Pharmacist</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;">
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="pos"> Point of Sale</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="inventory"> Imbentaryo</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="prescriptions"> Reseta</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="sales"> Sales History</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="admin"> Admin Branding</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="users"> User Management</label>
-                                </div>
-                                <button type="submit" class="btn" style="background: #16a34a; width: 100%;">Lumikha ng User</button>
-                            </form>
-                        </div>
+                    <div class="card" style="max-width: 600px; margin: 0 auto;">
+                        <h3>Magdagdag ng Bagong Produkto</h3>
+                        <form action="/add-product" method="POST">
+                            <input type="text" name="name" class="form-control" placeholder="Pangalan ng Gamot" required>
+                            <input type="text" name="category" class="form-control" placeholder="Kategorya (OTC / Prescription)" required>
+                            <input type="number" step="0.01" name="price" class="form-control" placeholder="Presyo (₱)" required>
+                            <input type="number" name="stock" class="form-control" placeholder="Dami ng Stock" required>
+                            <input type="text" name="batch_no" class="form-control" placeholder="Batch / Lot Number" required>
+                            <input type="date" name="expiry_date" class="form-control" required>
+                            <label style="font-size: 0.9rem; display: block; margin-bottom: 15px;"><input type="checkbox" name="requires_prescription" value="1"> Kailangan ng Reseta (Rx)?</label>
+                            <button type="submit" class="btn" style="background: #8e44ad; width: 100%;">I-save sa Imbentaryo</button>
+                        </form>
                     </div>
                 </div>
             </div>
 
-            <% } %>
-            <% if (activeAllowedPages.includes('users')) { %>
-            <div id="pane-users" class="module-pane <%= firstAllowedPage === 'users' ? 'active' : '' %>">
-                <div class="module-content">
-                    <div class="card" style="display:grid; gap:20px; max-width: 900px; margin: 0 auto;">
-                        <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #e2e8f0;">
-                            <h3>Users at Access</h3>
-                            <% const permissionLabels = {
-                                pos: 'Point of Sale',
-                                inventory: 'Imbentaryo',
-                                prescriptions: 'Reseta',
-                                sales: 'Sales History',
-                                admin: 'Admin Branding',
-                                users: 'User Management'
-                            }; %>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Username</th>
-                                        <th>Role</th>
-                                        <th>Allowed Modules</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <% if (shownUsers.length === 0) { %>
-                                        <tr>
-                                            <td colspan="3" style="text-align:center; color:#64748b;">Walang user account sa system.</td>
-                                        </tr>
-                                    <% } else { %>
-                                        <% shownUsers.forEach(u => { %>
-                                            <tr>
-                                                <td><%= u.username %></td>
-                                                <td><%= u.role %></td>
-                                                <td>
-                                                    <% const userPages = shownPermissions[u.username] || [];
-                                                       const pageNames = userPages.map(p => permissionLabels[p] || p);
-                                                    %>
-                                                    <%= pageNames.length ? pageNames.join(', ') : (['admin', 'superadmin'].includes(u.role) ? 'All Access' : 'Walang access') %>
-                                                </td>
-                                            </tr>
-                                        <% }) %>
-                                    <% } %>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #e2e8f0;">
-                            <h3>Update User Access</h3>
-                            <p style="margin-top: 0; color: #475569;">Pumili ng user at piliin ang mga module na pwedeng ma-access nila.</p>
-                            <form action="/admin/update-user-access" method="POST">
-                                <select id="user-access-select" name="username" class="form-control" required>
-                                    <option value="">Piliin ang User</option>
-                                    <% shownUsers.forEach(u => { %>
-                                        <option value="<%= u.username %>"><%= u.username %> (<%= u.role %>)</option>
-                                    <% }) %>
-                                </select>
-                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;">
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input id="check-pos" type="checkbox" name="allowed_pages" value="pos"> Point of Sale</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input id="check-inventory" type="checkbox" name="allowed_pages" value="inventory"> Imbentaryo</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input id="check-prescriptions" type="checkbox" name="allowed_pages" value="prescriptions"> Reseta</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input id="check-sales" type="checkbox" name="allowed_pages" value="sales"> Sales History</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input id="check-admin" type="checkbox" name="allowed_pages" value="admin"> Admin Branding</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input id="check-users" type="checkbox" name="allowed_pages" value="users"> User Management</label>
-                                </div>
-                                <button type="submit" class="btn" style="background: #2563eb; width: 100%;">I-save ang Access</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <% } %>
-
-            <% if (activeAllowedPages.includes('prescriptions')) { %>
-            <div id="pane-prescriptions" class="module-pane <%= firstAllowedPage === 'prescriptions' ? 'active' : '' %>">
+            <div id="pane-prescriptions" class="module-pane">
                 <div class="module-content">
                     <div class="card" style="max-width: 600px; margin: 0 auto 20px auto;">
                         <h3>I-validate at I-save ang Reseta (Rx)</h3>
@@ -426,9 +216,7 @@
                 </div>
             </div>
 
-            <% } %>
-            <% if (activeAllowedPages.includes('sales')) { %>
-            <div id="pane-sales" class="module-pane <%= firstAllowedPage === 'sales' ? 'active' : '' %>">
+            <div id="pane-sales" class="module-pane">
                 <div class="module-content">
                     <div class="card" style="max-width: 900px; margin: 0 auto;">
                         <h3>Sales History & Logs <span style="font-size: 0.8rem; color: #64748b; font-weight: normal;">(I-click ang row para makita ang resibo)</span></h3>
@@ -448,41 +236,9 @@
                     </div>
                 </div>
             </div>
-            <% } %>
-            <% } %>
-            <% if (activeAllowedPages.length === 0) { %>
-                <div class="module-pane active">
-                    <div class="module-content">
-                        <div class="card" style="max-width: 700px; margin: 40px auto; text-align: center;">
-                            <h3>Walang Module Access</h3>
-                            <p style="color: #475569;">Wala kang pahintulot sa anumang module. Makipag-ugnayan sa admin para mabigyan ng access.</p>
-                        </div>
-                    </div>
-                </div>
-            <% } %>
 
         </div>
     </div>
-
-    <% const permissionsData = typeof userPermissions !== 'undefined' && userPermissions ? userPermissions : {}; %>
-    <script>
-        const permissionsData = <%- JSON.stringify(permissionsData) %>;
-
-        const userAccessSelect = document.getElementById('user-access-select');
-        if (userAccessSelect) {
-            userAccessSelect.addEventListener('change', function() {
-                const user = this.value;
-                const selectedPermissions = permissionsData[user] || [];
-
-                document.getElementById('check-pos').checked = selectedPermissions.includes('pos');
-                document.getElementById('check-inventory').checked = selectedPermissions.includes('inventory');
-                document.getElementById('check-prescriptions').checked = selectedPermissions.includes('prescriptions');
-                document.getElementById('check-sales').checked = selectedPermissions.includes('sales');
-                document.getElementById('check-admin').checked = selectedPermissions.includes('admin');
-                document.getElementById('check-users').checked = selectedPermissions.includes('users');
-            });
-        }
-    </script>
 
     <div id="paymentModal" class="modal-overlay">
         <div class="modal-card">

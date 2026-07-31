@@ -19,9 +19,10 @@ app.use(session({
     saveUninitialized: true
 }));
 
-const db = new sqlite3.Database('./pharmacy.db', (err) => {
+const dbPath = path.join(__dirname, 'pharmacy.db');
+const db = new sqlite3.Database(dbPath, (err) => {
     if (err) console.error('Database connection error:', err.message);
-    else console.log('Connected to SQLite database (pharmacy.db).');
+    else console.log(`Connected to SQLite database (${dbPath}).`);
 });
 
 // Database Tables Initialization
@@ -145,14 +146,70 @@ app.get('/', isAuthenticated, (req, res) => {
                     if (settingsRows) {
                         settingsRows.forEach(row => { settings[row.key] = row.value; });
                     }
-                    
-                    res.render('dashboard', {
-                        user: req.session.user,
-                        role: req.session.role,
-                        products: products || [],
-                        prescriptions: prescriptions || [],
-                        sales: sales || [],
-                        settings: settings
+
+                    const allProducts = products || [];
+                    const lowStockThreshold = 10;
+                    const inventorySummary = {
+                        totalProducts: allProducts.length,
+                        totalStockValue: allProducts.reduce((sum, p) => sum + (p.price * p.stock), 0),
+                        lowStockCount: allProducts.filter(p => p.stock <= lowStockThreshold).length,
+                        prescriptionCount: allProducts.filter(p => p.requires_prescription === 1 || p.requires_prescription === '1').length,
+                        categoryCounts: allProducts.reduce((counts, p) => {
+                            const category = p.category || 'Unspecified';
+                            counts[category] = (counts[category] || 0) + 1;
+                            return counts;
+                        }, {}),
+                        lowStockThreshold
+                    };
+
+                    const allPages = ['pos', 'inventory', 'prescriptions', 'sales', 'admin', 'users'];
+
+                    db.all(`SELECT * FROM users ORDER BY id ASC`, [], (err, usersList) => {
+                        if (err) {
+                            console.error('usersList query error:', err.message);
+                        }
+                        console.log('usersList load count:', Array.isArray(usersList) ? usersList.length : 0);
+                        db.all(`SELECT * FROM user_permissions`, [], (err, permissionsRows) => {
+                            if (err) {
+                                console.error('permissions query error:', err.message);
+                            }
+
+                            const userPermissions = {};
+                            if (permissionsRows) {
+                                permissionsRows.forEach(row => {
+                                    const usernameKey = String(row.username || '').trim();
+                                    if (!userPermissions[usernameKey]) userPermissions[usernameKey] = [];
+                                    userPermissions[usernameKey].push(row.page_name);
+                                });
+                            }
+
+                            const currentUser = String(req.session.user || '').trim();
+                            const currentRole = String(req.session.role || '').trim().toLowerCase();
+                            const allowedPages = ['superadmin', 'admin'].includes(currentRole)
+                                ? allPages
+                                : (userPermissions[currentUser] || []);
+
+                            console.log('dashboard render', {
+                                currentUser,
+                                currentRole,
+                                usersCount: Array.isArray(usersList) ? usersList.length : 0,
+                                allowedPages,
+                                userPermissionsForCurrent: userPermissions[currentUser] || []
+                            });
+
+                            res.render('dashboard', {
+                                user: currentUser,
+                                role: currentRole,
+                                products: allProducts,
+                                prescriptions: prescriptions || [],
+                                sales: sales || [],
+                                settings: settings,
+                                inventorySummary,
+                                usersList: usersList || [],
+                                userPermissions,
+                                allowedPages
+                            });
+                        });
                     });
                 });
             });
@@ -162,9 +219,11 @@ app.get('/', isAuthenticated, (req, res) => {
 
 // Admin Features Routes
 app.post('/admin/branding', isAuthenticated, (req, res) => {
-    const { app_name } = req.body;
+    const { app_name, app_logo_url } = req.body;
     db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('app_name', ?)`, [app_name], () => {
-        res.redirect('/');
+        db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('app_logo_url', ?)`, [app_logo_url || ''], () => {
+            res.redirect('/');
+        });
     });
 });
 
@@ -178,15 +237,46 @@ app.post('/admin/maintenance', isAuthenticated, (req, res) => {
 
 app.post('/admin/create-user', isAuthenticated, (req, res) => {
     const { username, password, role, allowed_pages } = req.body;
-    
-    db.run(`INSERT INTO users (username, password, role) VALUES (?, ?, ?)`, [username, password, role], (err) => {
-        if (!err && allowed_pages) {
-            const pages = Array.isArray(allowed_pages) ? allowed_pages : [allowed_pages];
-            pages.forEach(page => {
-                db.run(`INSERT INTO user_permissions (username, page_name) VALUES (?, ?)`, [username, page]);
-            });
+    const pages = Array.isArray(allowed_pages)
+        ? allowed_pages
+        : (allowed_pages ? [allowed_pages] : []);
+
+    db.run(`INSERT INTO users (username, password, role) VALUES (?, ?, ?)`, [username, password, role], function(err) {
+        if (err) {
+            console.error('Create user error:', err.message);
+            return res.redirect('/');
         }
-        res.redirect('/');
+
+        if (pages.length > 0) {
+            const stmt = db.prepare(`INSERT INTO user_permissions (username, page_name) VALUES (?, ?)`);
+            pages.forEach(page => {
+                stmt.run(username, page);
+            });
+            stmt.finalize(() => res.redirect('/'));
+        } else {
+            res.redirect('/');
+        }
+    });
+});
+
+app.post('/admin/update-user-access', isAuthenticated, (req, res) => {
+    const { username, allowed_pages } = req.body;
+    const pages = Array.isArray(allowed_pages)
+        ? allowed_pages
+        : (allowed_pages ? [allowed_pages] : []);
+
+    db.run(`DELETE FROM user_permissions WHERE username = ?`, [username], (err) => {
+        if (err) return res.redirect('/');
+
+        if (pages.length > 0) {
+            const stmt = db.prepare(`INSERT INTO user_permissions (username, page_name) VALUES (?, ?)`);
+            pages.forEach(page => {
+                stmt.run(username, page);
+            });
+            stmt.finalize(() => res.redirect('/'));
+        } else {
+            res.redirect('/');
+        }
     });
 });
 
