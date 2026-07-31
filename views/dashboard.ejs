@@ -325,7 +325,7 @@
                             <input id="registry-file" name="product_file" type="file" accept=".xlsx,.xls" required>
                             <button type="submit" class="registry-btn primary">Import Product File</button><div id="registry-import-status" class="registry-status"></div>
                         </form>
-                        <div class="registry-note"><strong>Required headers</strong><br>Item, SKU, Barcode, Description, Cost, Price, Margin %, Possible Revenue<br><br><strong>Optional:</strong> Stock.<br><br>Margin % and Possible Revenue are calculated by the system. Download Excel first for the correct column structure.</div>
+                        <div class="registry-note"><strong>Required headers</strong><br>Item, SKU, Barcode, Description, Cost, Price<br><br><strong>Supported calculated headers:</strong> Margin %, Margin in %, Possible Revenue.<br><br><strong>Optional:</strong> Stock. Margin and Possible Revenue are always calculated by the system. Download Excel first for the correct column structure.</div>
                     </div>
                     <div class="card">
                         <h3 style="margin:0 0 5px;">Manual Batch Entry</h3>
@@ -1099,6 +1099,53 @@
             printWindow.document.close();
             printWindow.focus();
             printWindow.print();
+        }
+
+        function addManualBatchLine() {
+            const lines = document.getElementById('manual-batch-lines');
+            if (!lines) return;
+            const row = document.createElement('tr');
+            row.innerHTML = '<td><input name="name" placeholder="Product name"></td><td><input name="sku" placeholder="SKU"></td><td><input name="barcode" placeholder="Barcode"></td><td><input name="description" placeholder="Description"></td><td><input name="cost" type="number" min="0" step="0.01" placeholder="0.00"></td><td><input name="price" type="number" min="0" step="0.01" placeholder="0.00"></td><td><input name="stock" type="number" min="0" step="1" value="0"></td><td><button class="batch-remove" type="button" onclick="removeManualBatchLine(this)">Remove</button></td>';
+            lines.appendChild(row);
+        }
+
+        function removeManualBatchLine(button) {
+            const lines = document.getElementById('manual-batch-lines');
+            if (lines.children.length === 1) {
+                lines.firstElementChild.querySelectorAll('input').forEach(input => { input.value = input.name === 'stock' ? '0' : ''; });
+                return;
+            }
+            button.closest('tr').remove();
+        }
+
+        const manualBatchForm = document.getElementById('manual-batch-form');
+        if (manualBatchForm) {
+            addManualBatchLine();
+            manualBatchForm.addEventListener('submit', async event => {
+                event.preventDefault();
+                const items = [...document.querySelectorAll('#manual-batch-lines tr')].map(row => ({
+                    name: row.querySelector('[name="name"]').value, sku: row.querySelector('[name="sku"]').value,
+                    barcode: row.querySelector('[name="barcode"]').value, description: row.querySelector('[name="description"]').value,
+                    cost: row.querySelector('[name="cost"]').value, price: row.querySelector('[name="price"]').value,
+                    stock: row.querySelector('[name="stock"]').value
+                }));
+                const status = document.getElementById('manual-batch-status');
+                status.style.color = '#475569';
+                status.textContent = 'Saving batch...';
+                try {
+                    const response = await fetch('/inventory/manual-batch', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ batch_no: document.getElementById('manual-batch-number').value, category: document.getElementById('manual-batch-category').value, expiry_date: document.getElementById('manual-batch-expiry').value, items })
+                    });
+                    const result = await response.json();
+                    status.style.color = result.success ? '#047857' : '#b91c1c';
+                    status.textContent = result.message;
+                    if (result.success) setTimeout(() => location.reload(), 900);
+                } catch (error) {
+                    status.style.color = '#b91c1c';
+                    status.textContent = 'Unable to save this batch.';
+                }
+            });
         }
 
         const registryImportForm = document.getElementById('registry-import-form');
