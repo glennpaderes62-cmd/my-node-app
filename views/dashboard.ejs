@@ -87,6 +87,37 @@
         .sales-row { cursor: pointer; transition: background 0.15s; }
         .sales-row:hover { background-color: #f1f5f9; }
 
+        .eod-page { max-width: 980px; margin: 0 auto; }
+        .eod-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-bottom: 20px; }
+        .eod-field { display: flex; flex-direction: column; gap: 5px; min-width: 160px; }
+        .eod-field label { color: #64748b; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; }
+        .eod-field input, .eod-field select { border: 1px solid #cbd5e1; border-radius: 6px; padding: 9px 10px; font: inherit; color: #1e293b; background: #fff; }
+        .eod-reading-bar { display: flex; gap: 8px; padding: 6px; background: #e2e8f0; border-radius: 10px; margin-bottom: 20px; }
+        .eod-reading-button { flex: 1; border: 0; border-radius: 7px; padding: 11px 15px; background: transparent; color: #475569; font: inherit; font-weight: 600; cursor: pointer; }
+        .eod-reading-button.active { color: #1d4ed8; background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15); }
+        .eod-receipt { width: min(100%, 510px); margin: 0 auto; padding: 26px; box-sizing: border-box; color: #111827; background: #fff; border: 1px dashed #94a3b8; font-family: 'Courier New', Courier, monospace; font-size: 0.86rem; line-height: 1.5; }
+        .eod-receipt h3, .eod-receipt p { margin: 0; }
+        .eod-receipt-head { text-align: center; padding-bottom: 12px; border-bottom: 1px dashed #111827; }
+        .eod-receipt-title { letter-spacing: 1px; font-size: 1.15rem; }
+        .eod-receipt-meta { padding: 10px 0; border-bottom: 1px dashed #111827; }
+        .eod-receipt-line { display: flex; justify-content: space-between; gap: 14px; }
+        .eod-receipt-line span:last-child { text-align: right; }
+        .eod-receipt-section { padding: 10px 0; border-bottom: 1px dashed #111827; }
+        .eod-receipt-total { font-size: 1rem; font-weight: bold; padding: 6px 0; border-top: 1px solid #111827; border-bottom: 1px solid #111827; }
+        .eod-transaction { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 7px 0; border-bottom: 1px dotted #94a3b8; }
+        .eod-transaction small { color: #475569; grid-column: 1 / -1; }
+        .eod-empty { text-align: center; color: #64748b; padding: 20px 0; }
+        .eod-actions { display: flex; justify-content: center; margin-top: 16px; }
+
+        .admin-dashboard { max-width: 900px; margin: 0 auto; }
+        .admin-dashboard-title { margin: 0 0 6px; font-weight: 600; }
+        .admin-dashboard-subtitle { margin: 0 0 20px; color: #64748b; font-size: 0.92rem; }
+        .admin-tabs { display: flex; gap: 8px; padding: 6px; margin-bottom: 18px; background: #e2e8f0; border-radius: 10px; }
+        .admin-tab { flex: 1; padding: 10px 14px; border: 0; border-radius: 7px; background: transparent; color: #475569; font: inherit; font-size: 0.9rem; font-weight: 500; cursor: pointer; }
+        .admin-tab.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15); }
+        .admin-tab-panel { display: none; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .admin-tab-panel.active { display: block; }
+
         /* Phone and tablet layout */
         @media (max-width: 768px) {
             body { height: auto; min-height: 100vh; overflow: auto; }
@@ -118,6 +149,9 @@
             .modal-overlay { align-items: flex-end; }
             .modal-card { width: 100%; max-width: none; max-height: 90vh; overflow-y: auto; box-sizing: border-box; border-radius: 16px 16px 0 0; padding: 20px; }
             #receiptModal .modal-card { width: 100% !important; }
+            .admin-tabs { overflow-x: auto; }
+            .admin-tab { flex: 0 0 auto; white-space: nowrap; }
+            .admin-tab-panel { padding: 15px; }
         }
 
         @media (max-width: 420px) {
@@ -153,7 +187,7 @@
         
         <div class="sidebar">
             <div class="sidebar-title">Modules</div>
-            <% const allPages = ['pos', 'inventory', 'prescriptions', 'sales', 'admin', 'users']; %>
+            <% const allPages = ['pos', 'inventory', 'prescriptions', 'sales', 'end_of_day', 'admin', 'users']; %>
             <% let activeAllowedPages = typeof allowedPages !== 'undefined' && Array.isArray(allowedPages) ? allowedPages : []; %>
             <% if (['superadmin', 'admin'].includes(role)) { activeAllowedPages = allPages; } %>
             <% const firstAllowedPage = activeAllowedPages.length > 0 ? activeAllowedPages[0] : null; %>
@@ -164,6 +198,7 @@
                 { key: 'sales', label: '📊 Sales History' },
                 { key: 'admin', label: '⚙️ Admin Branding' },
                 { key: 'users', label: '👥 User Access' }
+                , { key: 'end_of_day', label: 'End of Day' }
             ]; %>
             <% menuItems.forEach(item => { %>
                 <% if (activeAllowedPages.includes(item.key)) { %>
@@ -322,8 +357,14 @@
             <% if (activeAllowedPages.includes('admin')) { %>
             <div id="pane-admin" class="module-pane <%= firstAllowedPage === 'admin' ? 'active' : '' %>">
                 <div class="module-content">
-                    <div class="card" style="display:grid; gap:20px; max-width: 900px; margin: 0 auto;">
-                        <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #e2e8f0;">
+                    <div class="admin-dashboard">
+                        <h2 class="admin-dashboard-title">Admin Dashboard</h2>
+                        <p class="admin-dashboard-subtitle">Pamahalaan ang branding at user accounts ng system.</p>
+                        <div class="admin-tabs" role="tablist" aria-label="Admin dashboard sections">
+                            <button type="button" class="admin-tab active" role="tab" aria-selected="true" onclick="switchAdminTab('branding', this)">Branding</button>
+                            <button type="button" class="admin-tab" role="tab" aria-selected="false" onclick="switchAdminTab('users', this)">Gumawa ng User</button>
+                        </div>
+                        <div id="admin-tab-branding" class="admin-tab-panel active" role="tabpanel">
                             <h3>App Branding</h3>
                             <p style="margin-top: 0; color: #475569;">Baguhin ang pangalan ng app at logo na makikita sa header.</p>
                             <form action="/admin/branding" method="POST">
@@ -342,7 +383,7 @@
                                 <button type="submit" class="btn" style="background: #2563eb; width: 100%;">I-save ang Branding</button>
                             </form>
                         </div>
-                        <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #e2e8f0;">
+                        <div id="admin-tab-users" class="admin-tab-panel" role="tabpanel">
                             <h3>Gumawa ng User</h3>
                             <p style="margin-top: 0; color: #475569;">Magdagdag ng bagong user at piliin ang mga module na pwedeng ma-access.</p>
                             <form action="/admin/create-user" method="POST">
@@ -495,6 +536,30 @@
             </div>
             <% } %>
             <% } %>
+            <% if (activeAllowedPages.includes('end_of_day')) { %>
+            <div id="pane-end_of_day" class="module-pane <%= firstAllowedPage === 'end_of_day' ? 'active' : '' %>">
+                <div class="module-content">
+                    <div class="eod-page">
+                        <div class="card">
+                            <h3>End of Day Reading</h3>
+                            <p style="margin-top:-8px; color:#64748b; font-size:0.9rem;">Select a date range and reading type, then print the report when ready.</p>
+                            <div class="eod-toolbar">
+                                <div class="eod-field"><label for="eod-from">From</label><input id="eod-from" type="date"></div>
+                                <div class="eod-field"><label for="eod-to">To</label><input id="eod-to" type="date"></div>
+                                <div class="eod-field" id="eod-cashier-field"><label for="eod-cashier">Cashier</label><select id="eod-cashier"></select></div>
+                                <button class="btn" type="button" onclick="renderEndOfDayReading()">Apply Filter</button>
+                            </div>
+                            <div class="eod-reading-bar" role="tablist" aria-label="Reading type">
+                                <button id="eod-x-button" class="eod-reading-button active" type="button" onclick="setEndOfDayMode('x')">X-Reading <small>(per cashier)</small></button>
+                                <button id="eod-z-button" class="eod-reading-button" type="button" onclick="setEndOfDayMode('z')">Z-Reading <small>(all cashiers)</small></button>
+                            </div>
+                            <div id="eod-receipt" class="eod-receipt" aria-live="polite"></div>
+                            <div class="eod-actions"><button class="btn" type="button" onclick="printEndOfDayReading()">Print Reading</button></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <% } %>
             <% if (activeAllowedPages.length === 0) { %>
                 <div class="module-pane active">
                     <div class="module-content">
@@ -620,6 +685,17 @@
 
             document.getElementById('pane-' + moduleName).classList.add('active');
             element.classList.add('active');
+        }
+
+        function switchAdminTab(tabName, element) {
+            document.querySelectorAll('.admin-tab-panel').forEach(panel => panel.classList.remove('active'));
+            document.querySelectorAll('.admin-tab').forEach(tab => {
+                tab.classList.remove('active');
+                tab.setAttribute('aria-selected', 'false');
+            });
+            document.getElementById('admin-tab-' + tabName).classList.add('active');
+            element.classList.add('active');
+            element.setAttribute('aria-selected', 'true');
         }
 
         let cart = [];
@@ -849,6 +925,103 @@
             document.body.innerHTML = originalContent;
             location.reload();
         }
+
+        // End-of-day readings use the existing sale records only; they do not alter sales or inventory.
+        const endOfDaySales = <%- JSON.stringify(sales || []).replace(/</g, '\\u003c') %>;
+        let endOfDayMode = 'x';
+
+        function escapeEndOfDayHtml(value) {
+            return String(value == null ? '' : value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+        }
+
+        function endOfDayLocalDate(date) {
+            const parsed = new Date(date);
+            if (Number.isNaN(parsed.getTime())) return '';
+            const year = parsed.getFullYear();
+            const month = String(parsed.getMonth() + 1).padStart(2, '0');
+            const day = String(parsed.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function endOfDaySaleDate(sale) {
+            let receipt = sale.receipt_data;
+            try { if (typeof receipt === 'string') receipt = JSON.parse(receipt); } catch (error) { receipt = {}; }
+            return endOfDayLocalDate((receipt && receipt.date) || sale.date);
+        }
+
+        function endOfDayMoney(value) {
+            return `PHP ${(Number(value) || 0).toFixed(2)}`;
+        }
+
+        function initializeEndOfDay() {
+            const from = document.getElementById('eod-from');
+            if (!from) return;
+            const today = endOfDayLocalDate(new Date());
+            from.value = today;
+            document.getElementById('eod-to').value = today;
+
+            const cashierSelect = document.getElementById('eod-cashier');
+            const cashiers = [...new Set(endOfDaySales.map(sale => sale.cashier || 'Unassigned'))].sort();
+            cashierSelect.innerHTML = cashiers.length
+                ? cashiers.map(cashier => `<option value="${escapeEndOfDayHtml(cashier)}">${escapeEndOfDayHtml(cashier)}</option>`).join('')
+                : '<option value="">No cashier records</option>';
+            renderEndOfDayReading();
+        }
+
+        function setEndOfDayMode(mode) {
+            endOfDayMode = mode;
+            document.getElementById('eod-x-button').classList.toggle('active', mode === 'x');
+            document.getElementById('eod-z-button').classList.toggle('active', mode === 'z');
+            document.getElementById('eod-cashier-field').style.display = mode === 'x' ? 'flex' : 'none';
+            renderEndOfDayReading();
+        }
+
+        function renderEndOfDayReading() {
+            const receipt = document.getElementById('eod-receipt');
+            if (!receipt) return;
+            const from = document.getElementById('eod-from').value;
+            const to = document.getElementById('eod-to').value;
+            const cashier = document.getElementById('eod-cashier').value;
+            const selectedSales = endOfDaySales.filter(sale => {
+                const saleDate = endOfDaySaleDate(sale);
+                return saleDate && (!from || saleDate >= from) && (!to || saleDate <= to) && (endOfDayMode === 'z' || sale.cashier === cashier);
+            });
+            const totals = selectedSales.reduce((summary, sale) => {
+                let details = sale.receipt_data;
+                try { if (typeof details === 'string') details = JSON.parse(details); } catch (error) { details = {}; }
+                const total = Number(sale.total) || Number(details.total) || 0;
+                const method = details.paymentMethod || 'Unspecified';
+                summary.gross += total;
+                summary.vatable += Number(details.vatableSales) || Math.max(0, total / 1.12);
+                summary.vat += Number(details.vatAmount) || Math.max(0, total - (total / 1.12));
+                summary.payments[method] = (summary.payments[method] || 0) + total;
+                return summary;
+            }, { gross: 0, vatable: 0, vat: 0, payments: {} });
+            const period = `${from || 'Beginning'} to ${to || 'Today'}`;
+            const readingName = endOfDayMode === 'x' ? 'X-READING' : 'Z-READING';
+            const cashierLabel = endOfDayMode === 'x' ? (cashier || 'No cashier selected') : 'All cashiers';
+            const paymentLines = Object.keys(totals.payments).length
+                ? Object.entries(totals.payments).map(([method, amount]) => `<div class="eod-receipt-line"><span>${escapeEndOfDayHtml(method)}</span><span>${endOfDayMoney(amount)}</span></div>`).join('')
+                : '<div class="eod-receipt-line"><span>No payments</span><span>PHP 0.00</span></div>';
+            const transactions = selectedSales.length
+                ? selectedSales.map(sale => `<div class="eod-transaction"><span>#${sale.id} · ${escapeEndOfDayHtml(sale.cashier || 'Unassigned')}</span><strong>${endOfDayMoney(sale.total)}</strong><small>${escapeEndOfDayHtml(sale.date || '')}</small></div>`).join('')
+                : '<div class="eod-empty">No completed transactions for this selection.</div>';
+
+            receipt.innerHTML = `<div class="eod-receipt-head"><h3>${escapeEndOfDayHtml('<%= settings.app_name || 'RxPOS' %>')}</h3><p class="eod-receipt-title">${readingName}</p><p>END OF DAY SALES READING</p></div><div class="eod-receipt-meta"><div class="eod-receipt-line"><span>Period</span><span>${escapeEndOfDayHtml(period)}</span></div><div class="eod-receipt-line"><span>Cashier</span><span>${escapeEndOfDayHtml(cashierLabel)}</span></div><div class="eod-receipt-line"><span>Printed</span><span>${escapeEndOfDayHtml(new Date().toLocaleString())}</span></div></div><div class="eod-receipt-section"><div class="eod-receipt-line"><span>Transactions</span><span>${selectedSales.length}</span></div><div class="eod-receipt-line eod-receipt-total"><span>GROSS SALES</span><span>${endOfDayMoney(totals.gross)}</span></div><div class="eod-receipt-line"><span>VATable sales</span><span>${endOfDayMoney(totals.vatable)}</span></div><div class="eod-receipt-line"><span>VAT (12%)</span><span>${endOfDayMoney(totals.vat)}</span></div></div><div class="eod-receipt-section"><strong>PAYMENT SUMMARY</strong>${paymentLines}</div><div class="eod-receipt-section"><strong>TRANSACTION LOG</strong>${transactions}</div><div class="eod-receipt-head" style="border:0; padding:12px 0 0;"><p>*** END OF READING ***</p></div>`;
+        }
+
+        function printEndOfDayReading() {
+            const content = document.getElementById('eod-receipt');
+            if (!content) return;
+            const printWindow = window.open('', '_blank', 'width=600,height=800');
+            if (!printWindow) return alert('Please allow pop-ups to print the End of Day reading.');
+            printWindow.document.write(`<html><head><title>End of Day Reading</title><style>body{margin:0;padding:20px;background:#fff}.eod-receipt{max-width:510px;margin:auto;padding:26px;box-sizing:border-box;color:#111827;border:1px dashed #94a3b8;font-family:'Courier New',monospace;font-size:12px;line-height:1.5}.eod-receipt h3,.eod-receipt p{margin:0}.eod-receipt-head{text-align:center;padding-bottom:12px;border-bottom:1px dashed #111827}.eod-receipt-title{letter-spacing:1px;font-size:16px}.eod-receipt-meta,.eod-receipt-section{padding:10px 0;border-bottom:1px dashed #111827}.eod-receipt-line{display:flex;justify-content:space-between;gap:14px}.eod-receipt-total{font-size:14px;font-weight:bold;padding:6px 0;border-top:1px solid #111827;border-bottom:1px solid #111827}.eod-transaction{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:7px 0;border-bottom:1px dotted #94a3b8}.eod-transaction small{grid-column:1/-1;color:#475569}.eod-empty{text-align:center;color:#64748b;padding:20px 0}</style></head><body>${content.outerHTML}</body></html>`);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        }
+
+        initializeEndOfDay();
     </script>
 </body>
 </html>

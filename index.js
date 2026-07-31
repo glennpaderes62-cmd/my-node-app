@@ -162,7 +162,7 @@ app.get('/', isAuthenticated, (req, res) => {
                         lowStockThreshold
                     };
 
-                    const allPages = ['pos', 'inventory', 'prescriptions', 'sales', 'admin', 'users'];
+                    const allPages = ['pos', 'inventory', 'prescriptions', 'sales', 'end_of_day', 'admin', 'users'];
 
                     db.all(`SELECT * FROM users ORDER BY id ASC`, [], (err, usersList) => {
                         if (err) {
