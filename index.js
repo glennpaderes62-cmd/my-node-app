@@ -100,26 +100,19 @@ app.use(
       process.env.SESSION_SECRET ||
       'rxpos_secure_secret_key',
 
-    resave:false,
+    resave: false,
 
-    saveUninitialized:false,
+    saveUninitialized: false,
 
-
-    cookie:{
-
-      secure:
-        process.env.NODE_ENV === 'production',
-
-      httpOnly:true,
-
-      maxAge:
-        24 * 60 * 60 * 1000
-
-    }
+cookie:{
+  secure: true,
+  httpOnly: true,
+  sameSite: 'none',
+  maxAge: 24 * 60 * 60 * 1000
+}
 
   })
 );
-
 
 
 app.use(maintenanceGuard);
