@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RxPOS - Enterprise Pharmacy System</title>
+    <title><%= settings.app_name || 'RxPOS' %> - Enterprise Pharmacy System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background-color: #f1f5f9; color: #1e293b; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -86,12 +86,133 @@
         /* Clickable Sales History Rows */
         .sales-row { cursor: pointer; transition: background 0.15s; }
         .sales-row:hover { background-color: #f1f5f9; }
+
+        .eod-page { max-width: 980px; margin: 0 auto; }
+        .eod-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-bottom: 20px; }
+        .eod-field { display: flex; flex-direction: column; gap: 5px; min-width: 160px; }
+        .eod-field label { color: #64748b; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; }
+        .eod-field input, .eod-field select { border: 1px solid #cbd5e1; border-radius: 6px; padding: 9px 10px; font: inherit; color: #1e293b; background: #fff; }
+        .eod-reading-bar { display: flex; gap: 8px; padding: 6px; background: #e2e8f0; border-radius: 10px; margin-bottom: 20px; }
+        .eod-reading-button { flex: 1; border: 0; border-radius: 7px; padding: 11px 15px; background: transparent; color: #475569; font: inherit; font-weight: 600; cursor: pointer; }
+        .eod-reading-button.active { color: #1d4ed8; background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15); }
+        .eod-receipt { width: min(100%, 510px); margin: 0 auto; padding: 26px; box-sizing: border-box; color: #111827; background: #fff; border: 1px dashed #94a3b8; font-family: 'Courier New', Courier, monospace; font-size: 0.86rem; line-height: 1.5; }
+        .eod-receipt h3, .eod-receipt p { margin: 0; }
+        .eod-receipt-head { text-align: center; padding-bottom: 12px; border-bottom: 1px dashed #111827; }
+        .eod-receipt-title { letter-spacing: 1px; font-size: 1.15rem; }
+        .eod-receipt-meta { padding: 10px 0; border-bottom: 1px dashed #111827; }
+        .eod-receipt-line { display: flex; justify-content: space-between; gap: 14px; }
+        .eod-receipt-line span:last-child { text-align: right; }
+        .eod-receipt-section { padding: 10px 0; border-bottom: 1px dashed #111827; }
+        .eod-receipt-total { font-size: 1rem; font-weight: bold; padding: 6px 0; border-top: 1px solid #111827; border-bottom: 1px solid #111827; }
+        .eod-transaction { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 7px 0; border-bottom: 1px dotted #94a3b8; }
+        .eod-transaction small { color: #475569; grid-column: 1 / -1; }
+        .eod-empty { text-align: center; color: #64748b; padding: 20px 0; }
+        .eod-actions { display: flex; justify-content: center; margin-top: 16px; }
+
+        .registry-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+        .registry-header h2 { margin: 0; font-size: 1.35rem; }
+        .registry-header p { margin: 5px 0 0; color: #64748b; font-size: 0.9rem; }
+        .registry-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .registry-btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; color: #334155; font: inherit; font-size: 0.86rem; font-weight: 600; text-decoration: none; cursor: pointer; }
+        .registry-btn.primary { color: #fff; border-color: #2563eb; background: #2563eb; }
+        .registry-metrics { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
+        .registry-metric { padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; }
+        .registry-metric span { display: block; color: #64748b; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; }
+        .registry-metric strong { display: block; margin-top: 6px; color: #0f172a; font-size: 1.45rem; }
+        .registry-import { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .8fr); gap: 20px; align-items: center; }
+        .registry-dropzone { padding: 22px; border: 2px dashed #93c5fd; border-radius: 10px; background: #f8fbff; }
+        .registry-dropzone input { width: 100%; margin: 10px 0 12px; }
+        .registry-note { padding: 17px; border-radius: 10px; background: #f8fafc; color: #475569; font-size: 0.86rem; line-height: 1.55; }
+        .registry-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+        .registry-search { min-width: 240px; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; }
+        .registry-table-wrap { overflow-x: auto; }
+        .registry-table { min-width: 1050px; margin-top: 0; }
+        .registry-table th { white-space: nowrap; }
+        .registry-table .amount { text-align: right; white-space: nowrap; }
+        .registry-price-input { width: 92px; padding: 7px; border: 1px solid #cbd5e1; border-radius: 5px; font: inherit; text-align: right; }
+        .registry-update-btn { margin-left: 6px; padding: 7px 9px; border: 0; border-radius: 5px; color: #fff; background: #0f766e; cursor: pointer; font-weight: 600; }
+        .registry-status { min-height: 20px; margin: 9px 0 0; font-size: 0.86rem; color: #475569; }
+        .registry-legacy { display: none; }
+        .batch-entry-grid { display: grid; grid-template-columns: repeat(3, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; }
+        .batch-entry-grid label { display: flex; flex-direction: column; gap: 5px; color: #475569; font-size: .8rem; font-weight: 600; }
+        .batch-entry-grid input { padding: 9px; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; }
+        .batch-lines { overflow-x: auto; }
+        .batch-lines table { min-width: 980px; margin-top: 0; }
+        .batch-lines input { width: 100%; min-width: 85px; padding: 7px; border: 1px solid #cbd5e1; border-radius: 5px; box-sizing: border-box; font: inherit; }
+        .batch-remove { border: 0; border-radius: 5px; padding: 7px 9px; color: #b91c1c; background: #fef2f2; font-weight: 600; cursor: pointer; }
+        .batch-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+
+        .admin-dashboard { max-width: 900px; margin: 0 auto; }
+        .admin-dashboard-title { margin: 0 0 6px; font-weight: 600; }
+        .admin-dashboard-subtitle { margin: 0 0 20px; color: #64748b; font-size: 0.92rem; }
+        .admin-tabs { display: flex; gap: 8px; padding: 6px; margin-bottom: 18px; background: #e2e8f0; border-radius: 10px; }
+        .admin-tab { flex: 1; padding: 10px 14px; border: 0; border-radius: 7px; background: transparent; color: #475569; font: inherit; font-size: 0.9rem; font-weight: 500; cursor: pointer; }
+        .admin-tab.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15); }
+        .admin-tab-panel { display: none; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .admin-tab-panel.active { display: block; }
+
+        /* Phone and tablet layout */
+        @media (max-width: 768px) {
+            body { height: auto; min-height: 100vh; overflow: auto; }
+            .pos-header { height: auto; min-height: 50px; padding: 10px 14px; gap: 8px; flex-wrap: wrap; }
+            .pos-header h2 { font-size: 1rem; min-width: 0; }
+            .pos-header h2 span:first-of-type { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 175px; }
+            .pos-header .user-info { width: 100%; justify-content: space-between; gap: 8px; font-size: 0.82rem; }
+
+            .app-layout { display: block; height: auto; overflow: visible; }
+            .sidebar { width: 100%; flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid #334155; }
+            .sidebar-title { display: none; }
+            .menu-item { flex: 0 0 auto; padding: 12px 14px; border-left: 0; border-bottom: 3px solid transparent; font-size: 0.8rem; white-space: nowrap; }
+            .menu-item.active { border-left-color: transparent; border-bottom-color: #38bdf8; }
+
+            .content-area, .module-pane, .module-pane.active { height: auto; min-height: 0; overflow: visible; }
+            .module-pane.active { display: block; }
+            .pos-main-container { display: flex; height: auto; flex-direction: column; }
+            .left-panel, .right-panel { width: 100%; box-sizing: border-box; }
+            .left-panel { border-right: 0; border-bottom: 1px solid #cbd5e1; }
+            .cart-section { max-height: 260px; min-height: 120px; }
+            .right-panel { min-height: 420px; overflow: visible; }
+            .products-grid-container { grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)); overflow: visible; }
+            .product-tile { min-height: 105px; height: auto; }
+
+            .module-content { padding: 14px; overflow: visible; box-sizing: border-box; }
+            .card { padding: 15px; margin-bottom: 14px; overflow-x: auto; }
+            table { min-width: 580px; }
+            .cart-table { min-width: 440px; }
+            .modal-overlay { align-items: flex-end; }
+            .modal-card { width: 100%; max-width: none; max-height: 90vh; overflow-y: auto; box-sizing: border-box; border-radius: 16px 16px 0 0; padding: 20px; }
+            #receiptModal .modal-card { width: 100% !important; }
+            .admin-tabs { overflow-x: auto; }
+            .admin-tab { flex: 0 0 auto; white-space: nowrap; }
+            .admin-tab-panel { padding: 15px; }
+            .registry-metrics { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
+            .registry-import { grid-template-columns: 1fr; }
+            .batch-entry-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 420px) {
+            .pos-header h2 span:first-of-type { max-width: 125px; }
+            .pos-header h2 span:last-child { display: none; }
+            .products-grid-container { padding: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+            .categories-bar { padding: 10px; }
+            .cat-btn { padding: 8px 12px; }
+            .keypad-container { padding: 8px; }
+            .key-btn { min-height: 44px; padding: 10px 6px; }
+            .payment-methods-grid { gap: 6px; }
+            .pay-card { padding: 10px 4px; font-size: 0.85rem; }
+        }
     </style>
 </head>
 <body>
 
     <div class="pos-header">
-        <h2>💊 RxPOS <span style="font-size: 0.8rem; background: #1abc9c; padding: 2px 8px; border-radius: 4px; font-weight: 400;">Enterprise</span></h2>
+        <h2 style="display:flex; align-items:center; gap:10px;">
+            <% if (settings.app_logo_url) { %>
+                <img src="<%= settings.app_logo_url %>" alt="Logo" style="height:28px; width:auto; border-radius:6px; object-fit:contain; background:#fff; padding:2px;" />
+            <% } %>
+            <span><%= settings.app_name || 'RxPOS' %></span>
+            <span style="font-size: 0.8rem; background: #1abc9c; padding: 2px 8px; border-radius: 4px; font-weight: 400;">Enterprise</span>
+        </h2>
         <div class="user-info">
             <span>Cashier: <strong><%= user %></strong></span>
             <a href="/logout">Log Out</a>
@@ -102,15 +223,32 @@
         
         <div class="sidebar">
             <div class="sidebar-title">Modules</div>
-            <div class="menu-item active" onclick="switchModule('pos', this)">🛒 Point of Sale</div>
-            <div class="menu-item" onclick="switchModule('inventory', this)">📦 Imbentaryo & Produkto</div>
-            <div class="menu-item" onclick="switchModule('prescriptions', this)">📋 Reseta (Rx)</div>
-            <div class="menu-item" onclick="switchModule('sales', this)">📊 Sales History</div>
+            <% const allPages = ['pos', 'inventory', 'prescriptions', 'sales', 'end_of_day', 'admin', 'users']; %>
+            <% let activeAllowedPages = typeof allowedPages !== 'undefined' && Array.isArray(allowedPages) ? allowedPages : []; %>
+            <% if (['superadmin', 'admin'].includes(role)) { activeAllowedPages = allPages; } %>
+            <% const firstAllowedPage = activeAllowedPages.length > 0 ? activeAllowedPages[0] : null; %>
+            <% const menuItems = [
+                { key: 'pos', label: '🛒 Point of Sale' },
+                { key: 'inventory', label: '📦 Imbentaryo & Produkto' },
+                { key: 'prescriptions', label: '📋 Reseta (Rx)' },
+                { key: 'sales', label: '📊 Sales History' },
+                { key: 'admin', label: '⚙️ Admin Branding' },
+                { key: 'users', label: '👥 User Access' }
+                , { key: 'end_of_day', label: 'End of Day' }
+            ]; %>
+            <% menuItems.forEach(item => { %>
+                <% if (activeAllowedPages.includes(item.key)) { %>
+                    <div class="menu-item <%= item.key === firstAllowedPage ? 'active' : '' %>" onclick="switchModule('<%= item.key %>', this)"><%= item.label %></div>
+                <% } %>
+            <% }); %>
         </div>
 
         <div class="content-area">
-            
-            <div id="pane-pos" class="module-pane active">
+            <% const shownUsers = typeof usersList !== 'undefined' ? usersList : []; %>
+            <% const shownPermissions = typeof userPermissions !== 'undefined' ? userPermissions : {}; %>
+            <% if (activeAllowedPages && activeAllowedPages.length > 0) { %>
+                <% if (activeAllowedPages.includes('pos')) { %>
+                    <div id="pane-pos" class="module-pane <%= firstAllowedPage === 'pos' ? 'active' : '' %>">
                 <div class="pos-main-container">
                     <div class="left-panel">
                         <div class="cart-section">
@@ -166,26 +304,263 @@
                     </div>
                 </div>
             </div>
-
-            <div id="pane-inventory" class="module-pane">
+            <% } %>
+            <% if (activeAllowedPages.includes('inventory')) { %>
+            <div id="pane-inventory" class="module-pane <%= firstAllowedPage === 'inventory' ? 'active' : '' %>">
                 <div class="module-content">
-                    <div class="card" style="max-width: 600px; margin: 0 auto;">
-                        <h3>Magdagdag ng Bagong Produkto</h3>
-                        <form action="/add-product" method="POST">
-                            <input type="text" name="name" class="form-control" placeholder="Pangalan ng Gamot" required>
-                            <input type="text" name="category" class="form-control" placeholder="Kategorya (OTC / Prescription)" required>
-                            <input type="number" step="0.01" name="price" class="form-control" placeholder="Presyo (₱)" required>
-                            <input type="number" name="stock" class="form-control" placeholder="Dami ng Stock" required>
-                            <input type="text" name="batch_no" class="form-control" placeholder="Batch / Lot Number" required>
-                            <input type="date" name="expiry_date" class="form-control" required>
-                            <label style="font-size: 0.9rem; display: block; margin-bottom: 15px;"><input type="checkbox" name="requires_prescription" value="1"> Kailangan ng Reseta (Rx)?</label>
-                            <button type="submit" class="btn" style="background: #8e44ad; width: 100%;">I-save sa Imbentaryo</button>
+                    <% const registryPotentialRevenue = products.reduce((total, product) => total + ((Number(product.price) || 0) - (Number(product.cost) || 0)) * (Number(product.stock) || 0), 0); %>
+                    <div class="registry-header">
+                        <div><h2>Product Registry</h2><p>Upload a standard Excel product file, update prices strategically, and download current reports.</p></div>
+                        <div class="registry-actions"><a class="registry-btn" href="/inventory/export.xlsx">Download Excel</a><a class="registry-btn" href="/inventory/export.pdf">Download PDF</a></div>
+                    </div>
+                    <div class="registry-metrics">
+                        <div class="registry-metric"><span>Registered items</span><strong><%= inventorySummary.totalProducts %></strong></div>
+                        <div class="registry-metric"><span>Stock value</span><strong>PHP <%= inventorySummary.totalStockValue.toFixed(2) %></strong></div>
+                        <div class="registry-metric"><span>Low stock</span><strong><%= inventorySummary.lowStockCount %></strong></div>
+                        <div class="registry-metric"><span>Possible revenue</span><strong>PHP <%= registryPotentialRevenue.toFixed(2) %></strong></div>
+                    </div>
+                    <div class="card registry-import">
+                        <form id="registry-import-form" class="registry-dropzone">
+                            <h3 style="margin:0;">Mass upload products</h3><p style="margin:7px 0; color:#475569; font-size:.88rem;">Excel rows matching an existing SKU or barcode are updated. New rows are added.</p>
+                            <input id="registry-file" name="product_file" type="file" accept=".xlsx,.xls" required>
+                            <button type="submit" class="registry-btn primary">Import Product File</button><div id="registry-import-status" class="registry-status"></div>
                         </form>
+                        <div class="registry-note"><strong>Required headers</strong><br>Item, SKU, Barcode, Description, Cost, Price<br><br><strong>Supported calculated headers:</strong> Margin %, Margin in %, Possible Revenue.<br><br><strong>Optional:</strong> Stock. Margin and Possible Revenue are always calculated by the system. Download Excel first for the correct column structure.</div>
+                    </div>
+                    <div class="card">
+                        <h3 style="margin:0 0 5px;">Manual Batch Entry</h3>
+                        <p style="margin:0 0 15px; color:#64748b; font-size:.88rem;">Set the batch information once, then use <strong>Add line</strong> to keep entering products under the same batch number.</p>
+                        <form id="manual-batch-form">
+                            <div class="batch-entry-grid">
+                                <label>Batch Number<input id="manual-batch-number" type="text" required placeholder="e.g. BATCH-2026-001"></label>
+                                <label>Category<input id="manual-batch-category" type="text" value="General" required></label>
+                                <label>Expiry Date<input id="manual-batch-expiry" type="date"></label>
+                            </div>
+                            <div class="batch-lines"><table><thead><tr><th>Item</th><th>SKU</th><th>Barcode</th><th>Description</th><th>Cost</th><th>Price</th><th>Stock</th><th></th></tr></thead><tbody id="manual-batch-lines"></tbody></table></div>
+                            <div class="batch-actions"><button class="registry-btn" type="button" onclick="addManualBatchLine()">+ Add line</button><button class="registry-btn primary" type="submit">Save Product Batch</button></div>
+                            <div id="manual-batch-status" class="registry-status"></div>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <div class="registry-toolbar"><div><h3 style="margin:0;">Registry List</h3><small style="color:#64748b;">Margin = (Price − Cost) ÷ Price. Possible revenue is projected profit from available stock.</small></div><input id="registry-search" class="registry-search" type="search" placeholder="Search item, SKU, barcode..." oninput="filterRegistryRows()"></div>
+                        <div class="registry-table-wrap"><table class="registry-table"><thead><tr><th>Item</th><th>SKU</th><th>Barcode</th><th>Description</th><th class="amount">Cost</th><th class="amount">Price</th><th class="amount">Margin %</th><th class="amount">Possible Revenue</th><th>Price Update</th></tr></thead><tbody id="registry-rows">
+                        <% products.forEach(product => { const cost = Number(product.cost) || 0; const price = Number(product.price) || 0; const margin = price ? ((price - cost) / price) * 100 : 0; const possibleRevenue = (price - cost) * (Number(product.stock) || 0); %>
+                            <tr data-registry-search="<%= [product.name, product.sku, product.barcode, product.description].join(' ').toLowerCase() %>"><td><strong><%= product.name %></strong><br><small style="color:#64748b;">Stock: <%= product.stock %></small></td><td><%= product.sku || '—' %></td><td><%= product.barcode || '—' %></td><td><%= product.description || '—' %></td><td class="amount">PHP <%= cost.toFixed(2) %></td><td class="amount">PHP <%= price.toFixed(2) %></td><td class="amount"><%= margin.toFixed(1) %>%</td><td class="amount">PHP <%= possibleRevenue.toFixed(2) %></td><td><input id="price-<%= product.id %>" class="registry-price-input" type="number" min="0" step="0.01" value="<%= price.toFixed(2) %>"><button class="registry-update-btn" type="button" onclick="updateRegistryPrice(<%= product.id %>)">Update</button></td></tr>
+                        <% }) %>
+                        </tbody></table></div>
+                    </div>
+                    <div class="registry-legacy" aria-hidden="true">
+                    <div class="card" style="display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px;">
+                        <div style="background: #eef2ff; padding: 18px; border-radius: 12px;">
+                            <h3 style="margin-top:0;">Kabuuang Produkto</h3>
+                            <p style="font-size: 2rem; font-weight: 700; margin: 8px 0 0 0;"><%= inventorySummary.totalProducts %></p>
+                        </div>
+                        <div style="background: #f5f3ff; padding: 18px; border-radius: 12px;">
+                            <h3 style="margin-top:0;">Kabuuang Halaga ng Stock</h3>
+                            <p style="font-size: 2rem; font-weight: 700; margin: 8px 0 0 0;">₱<%= inventorySummary.totalStockValue.toFixed(2) %></p>
+                        </div>
+                        <div style="background: #ffefeb; padding: 18px; border-radius: 12px;">
+                            <h3 style="margin-top:0;">Mababang Stock</h3>
+                            <p style="font-size: 2rem; font-weight: 700; margin: 8px 0 0 0;"><%= inventorySummary.lowStockCount %></p>
+                            <small style="color: #475569;">Threshold: <%= inventorySummary.lowStockThreshold %> units</small>
+                        </div>
+                        <div style="background: #ecfdf5; padding: 18px; border-radius: 12px;">
+                            <h3 style="margin-top:0;">Reseta na Produkto</h3>
+                            <p style="font-size: 2rem; font-weight: 700; margin: 8px 0 0 0;"><%= inventorySummary.prescriptionCount %></p>
+                        </div>
+                    </div>
+
+                    <div class="card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div style="min-width: 0;">
+                            <h3>Magdagdag ng Bagong Produkto</h3>
+                            <form action="/add-product" method="POST">
+                                <input type="text" name="name" class="form-control" placeholder="Pangalan ng Gamot" required>
+                                <input type="text" name="category" class="form-control" placeholder="Kategorya (OTC / Prescription)" required>
+                                <input type="number" step="0.01" name="price" class="form-control" placeholder="Presyo (₱)" required>
+                                <input type="number" name="stock" class="form-control" placeholder="Dami ng Stock" required>
+                                <input type="text" name="batch_no" class="form-control" placeholder="Batch / Lot Number" required>
+                                <input type="date" name="expiry_date" class="form-control" required>
+                                <label style="font-size: 0.9rem; display: block; margin-bottom: 15px;"><input type="checkbox" name="requires_prescription" value="1"> Kailangan ng Reseta (Rx)?</label>
+                                <button type="submit" class="btn" style="background: #8e44ad; width: 100%;">I-save sa Imbentaryo</button>
+                            </form>
+                        </div>
+                        <div style="min-width: 0;">
+                            <h3>Inventory Breakdown</h3>
+                            <table>
+                                <thead>
+                                    <tr><th>Kategorya</th><th>Bilang</th></tr>
+                                </thead>
+                                <tbody>
+                                    <% Object.keys(inventorySummary.categoryCounts).forEach(category => { %>
+                                        <tr>
+                                            <td><%= category %></td>
+                                            <td><%= inventorySummary.categoryCounts[category] %></td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top: 20px;">
+                        <h3>Kasulukuyang Listahan ng Imbentaryo</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Pangalan</th>
+                                    <th>Kategorya</th>
+                                    <th>Stock</th>
+                                    <th>Presyo</th>
+                                    <th>Expiry</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% products.forEach(product => { %>
+                                    <tr style="<%= product.stock <= inventorySummary.lowStockThreshold ? 'background: #fff1f0;' : '' %>">
+                                        <td>#<%= product.id %></td>
+                                        <td><%= product.name %></td>
+                                        <td><%= product.category %></td>
+                                        <td><%= product.stock %></td>
+                                        <td>₱<%= product.price.toFixed(2) %></td>
+                                        <td><%= product.expiry_date %></td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+                    </div>
+            <% } %>
+            <% if (activeAllowedPages.includes('admin')) { %>
+            <div id="pane-admin" class="module-pane <%= firstAllowedPage === 'admin' ? 'active' : '' %>">
+                <div class="module-content">
+                    <div class="admin-dashboard">
+                        <h2 class="admin-dashboard-title">Admin Dashboard</h2>
+                        <p class="admin-dashboard-subtitle">Pamahalaan ang branding at user accounts ng system.</p>
+                        <div class="admin-tabs" role="tablist" aria-label="Admin dashboard sections">
+                            <button type="button" class="admin-tab active" role="tab" aria-selected="true" onclick="switchAdminTab('branding', this)">Branding</button>
+                            <button type="button" class="admin-tab" role="tab" aria-selected="false" onclick="switchAdminTab('users', this)">Gumawa ng User</button>
+                        </div>
+                        <div id="admin-tab-branding" class="admin-tab-panel active" role="tabpanel">
+                            <h3>App Branding</h3>
+                            <p style="margin-top: 0; color: #475569;">Baguhin ang pangalan ng app at logo na makikita sa header.</p>
+                            <form action="/admin/branding" method="POST">
+                                <input type="text" name="app_name" class="form-control" placeholder="App Name" value="<%= settings.app_name || '' %>" required>
+                                <input type="url" name="app_logo_url" class="form-control" placeholder="Logo Image URL" value="<%= settings.app_logo_url || '' %>">
+                                <div style="display:flex; gap:12px; align-items:center; margin-bottom:16px;">
+                                    <% if (settings.app_logo_url) { %>
+                                        <div style="width:80px; height:80px; border:1px solid #cbd5e1; border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#fff;">
+                                            <img src="<%= settings.app_logo_url %>" alt="Logo preview" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                                        </div>
+                                    <% } %>
+                                    <div style="color:#475569; font-size:0.95rem;">
+                                        I-paste ang logo URL para lumabas sa tuktok na header.
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn" style="background: #2563eb; width: 100%;">I-save ang Branding</button>
+                            </form>
+                        </div>
+                        <div id="admin-tab-users" class="admin-tab-panel" role="tabpanel">
+                            <h3>Gumawa ng User</h3>
+                            <p style="margin-top: 0; color: #475569;">Magdagdag ng bagong user at piliin ang mga module na pwedeng ma-access.</p>
+                            <form action="/admin/create-user" method="POST">
+                                <input type="text" name="username" class="form-control" placeholder="Username" required>
+                                <input type="password" name="password" class="form-control" placeholder="Password" required>
+                                <select name="role" class="form-control" required>
+                                    <option value="cashier">Cashier</option>
+                                    <option value="pharmacist">Pharmacist</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;">
+                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="pos"> Point of Sale</label>
+                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="inventory"> Imbentaryo</label>
+                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="prescriptions"> Reseta</label>
+                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="sales"> Sales History</label>
+                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="admin"> Admin Branding</label>
+                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="users"> User Management</label>
+                                </div>
+                                <button type="submit" class="btn" style="background: #16a34a; width: 100%;">Lumikha ng User</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div id="pane-prescriptions" class="module-pane">
+            <% } %>
+            <% if (activeAllowedPages.includes('users')) { %>
+            <div id="pane-users" class="module-pane <%= firstAllowedPage === 'users' ? 'active' : '' %>">
+                <div class="module-content">
+                    <div class="card" style="display:grid; gap:20px; max-width: 900px; margin: 0 auto;">
+                        <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #e2e8f0;">
+                            <h3>Users at Access</h3>
+                            <% const permissionLabels = {
+                                pos: 'Point of Sale',
+                                inventory: 'Imbentaryo',
+                                prescriptions: 'Reseta',
+                                sales: 'Sales History',
+                                admin: 'Admin Branding',
+                                users: 'User Management'
+                            }; %>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Role</th>
+                                        <th>Allowed Modules</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (shownUsers.length === 0) { %>
+                                        <tr>
+                                            <td colspan="3" style="text-align:center; color:#64748b;">Walang user account sa system.</td>
+                                        </tr>
+                                    <% } else { %>
+                                        <% shownUsers.forEach(u => { %>
+                                            <tr>
+                                                <td><%= u.username %></td>
+                                                <td><%= u.role %></td>
+                                                <td>
+                                                    <% const userPages = shownPermissions[u.username] || [];
+                                                       const pageNames = userPages.map(p => permissionLabels[p] || p);
+                                                    %>
+                                                    <%= pageNames.length ? pageNames.join(', ') : (['admin', 'superadmin'].includes(u.role) ? 'All Access' : 'Walang access') %>
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #e2e8f0;">
+                            <h3>Update User Access</h3>
+                            <p style="margin-top: 0; color: #475569;">Pumili ng user at piliin ang mga module na pwedeng ma-access nila.</p>
+                            <form action="/admin/update-user-access" method="POST">
+                                <select id="user-access-select" name="username" class="form-control" required>
+                                    <option value="">Piliin ang User</option>
+                                    <% shownUsers.forEach(u => { %>
+                                        <option value="<%= u.username %>"><%= u.username %> (<%= u.role %>)</option>
+                                    <% }) %>
+                                </select>
+                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;">
+                                    <label style="display:flex; gap: 8px; align-items:center;"><input id="check-pos" type="checkbox" name="allowed_pages" value="pos"> Point of Sale</label>
+                                    <label style="display:flex; gap: 8px; align-items:center;"><input id="check-inventory" type="checkbox" name="allowed_pages" value="inventory"> Imbentaryo</label>
+                                    <label style="display:flex; gap: 8px; align-items:center;"><input id="check-prescriptions" type="checkbox" name="allowed_pages" value="prescriptions"> Reseta</label>
+                                    <label style="display:flex; gap: 8px; align-items:center;"><input id="check-sales" type="checkbox" name="allowed_pages" value="sales"> Sales History</label>
+                                    <label style="display:flex; gap: 8px; align-items:center;"><input id="check-admin" type="checkbox" name="allowed_pages" value="admin"> Admin Branding</label>
+                                    <label style="display:flex; gap: 8px; align-items:center;"><input id="check-users" type="checkbox" name="allowed_pages" value="users"> User Management</label>
+                                </div>
+                                <button type="submit" class="btn" style="background: #2563eb; width: 100%;">I-save ang Access</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <% } %>
+
+            <% if (activeAllowedPages.includes('prescriptions')) { %>
+            <div id="pane-prescriptions" class="module-pane <%= firstAllowedPage === 'prescriptions' ? 'active' : '' %>">
                 <div class="module-content">
                     <div class="card" style="max-width: 600px; margin: 0 auto 20px auto;">
                         <h3>I-validate at I-save ang Reseta (Rx)</h3>
@@ -216,7 +591,9 @@
                 </div>
             </div>
 
-            <div id="pane-sales" class="module-pane">
+            <% } %>
+            <% if (activeAllowedPages.includes('sales')) { %>
+            <div id="pane-sales" class="module-pane <%= firstAllowedPage === 'sales' ? 'active' : '' %>">
                 <div class="module-content">
                     <div class="card" style="max-width: 900px; margin: 0 auto;">
                         <h3>Sales History & Logs <span style="font-size: 0.8rem; color: #64748b; font-weight: normal;">(I-click ang row para makita ang resibo)</span></h3>
@@ -236,9 +613,66 @@
                     </div>
                 </div>
             </div>
+            <% } %>
+            <% } %>
+            <% if (activeAllowedPages.includes('end_of_day')) { %>
+            <div id="pane-end_of_day" class="module-pane <%= firstAllowedPage === 'end_of_day' ? 'active' : '' %>">
+                <div class="module-content">
+                    <div class="eod-page">
+                        <div class="card">
+                            <h3>End of Day Reading</h3>
+                            <p style="margin-top:-8px; color:#64748b; font-size:0.9rem;">Select a date range and reading type, then print the report when ready.</p>
+                            <div class="eod-toolbar">
+                                <div class="eod-field"><label for="eod-from">From</label><input id="eod-from" type="date"></div>
+                                <div class="eod-field"><label for="eod-to">To</label><input id="eod-to" type="date"></div>
+                                <div class="eod-field" id="eod-cashier-field"><label for="eod-cashier">Cashier</label><select id="eod-cashier"></select></div>
+                                <button class="btn" type="button" onclick="renderEndOfDayReading()">Apply Filter</button>
+                            </div>
+                            <div class="eod-reading-bar" role="tablist" aria-label="Reading type">
+                                <button id="eod-x-button" class="eod-reading-button active" type="button" onclick="setEndOfDayMode('x')">X-Reading <small>(per cashier)</small></button>
+                                <button id="eod-z-button" class="eod-reading-button" type="button" onclick="setEndOfDayMode('z')">Z-Reading <small>(all cashiers)</small></button>
+                            </div>
+                            <div id="eod-receipt" class="eod-receipt" aria-live="polite"></div>
+                            <div class="eod-actions"><button class="btn" type="button" onclick="printEndOfDayReading()">Print Reading</button></div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+            <% } %>
+            <% if (activeAllowedPages.length === 0) { %>
+                <div class="module-pane active">
+                    <div class="module-content">
+                        <div class="card" style="max-width: 700px; margin: 40px auto; text-align: center;">
+                            <h3>Walang Module Access</h3>
+                            <p style="color: #475569;">Wala kang pahintulot sa anumang module. Makipag-ugnayan sa admin para mabigyan ng access.</p>
+                        </div>
+                    </div>
+                </div>
+            <% } %>
 
         </div>
     </div>
+
+    <% const permissionsData = typeof userPermissions !== 'undefined' && userPermissions ? userPermissions : {}; %>
+    <script>
+        const permissionsData = <%- JSON.stringify(permissionsData) %>;
+
+        const userAccessSelect = document.getElementById('user-access-select');
+        if (userAccessSelect) {
+            userAccessSelect.addEventListener('change', function() {
+                const user = this.value;
+                const selectedPermissions = permissionsData[user] || [];
+
+                document.getElementById('check-pos').checked = selectedPermissions.includes('pos');
+                document.getElementById('check-inventory').checked = selectedPermissions.includes('inventory');
+                document.getElementById('check-prescriptions').checked = selectedPermissions.includes('prescriptions');
+                document.getElementById('check-sales').checked = selectedPermissions.includes('sales');
+                document.getElementById('check-admin').checked = selectedPermissions.includes('admin');
+                document.getElementById('check-users').checked = selectedPermissions.includes('users');
+            });
+        }
+    </script>
 
     <div id="paymentModal" class="modal-overlay">
         <div class="modal-card">
@@ -331,6 +765,17 @@
 
             document.getElementById('pane-' + moduleName).classList.add('active');
             element.classList.add('active');
+        }
+
+        function switchAdminTab(tabName, element) {
+            document.querySelectorAll('.admin-tab-panel').forEach(panel => panel.classList.remove('active'));
+            document.querySelectorAll('.admin-tab').forEach(tab => {
+                tab.classList.remove('active');
+                tab.setAttribute('aria-selected', 'false');
+            });
+            document.getElementById('admin-tab-' + tabName).classList.add('active');
+            element.classList.add('active');
+            element.setAttribute('aria-selected', 'true');
         }
 
         let cart = [];
@@ -560,6 +1005,195 @@
             document.body.innerHTML = originalContent;
             location.reload();
         }
+
+        // End-of-day readings use the existing sale records only; they do not alter sales or inventory.
+        const endOfDaySales = <%- JSON.stringify(sales || []).replace(/</g, '\\u003c') %>;
+        let endOfDayMode = 'x';
+
+        function escapeEndOfDayHtml(value) {
+            return String(value == null ? '' : value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+        }
+
+        function endOfDayLocalDate(date) {
+            const parsed = new Date(date);
+            if (Number.isNaN(parsed.getTime())) return '';
+            const year = parsed.getFullYear();
+            const month = String(parsed.getMonth() + 1).padStart(2, '0');
+            const day = String(parsed.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function endOfDaySaleDate(sale) {
+            let receipt = sale.receipt_data;
+            try { if (typeof receipt === 'string') receipt = JSON.parse(receipt); } catch (error) { receipt = {}; }
+            return endOfDayLocalDate((receipt && receipt.date) || sale.date);
+        }
+
+        function endOfDayMoney(value) {
+            return `PHP ${(Number(value) || 0).toFixed(2)}`;
+        }
+
+        function initializeEndOfDay() {
+            const from = document.getElementById('eod-from');
+            if (!from) return;
+            const today = endOfDayLocalDate(new Date());
+            from.value = today;
+            document.getElementById('eod-to').value = today;
+
+            const cashierSelect = document.getElementById('eod-cashier');
+            const cashiers = [...new Set(endOfDaySales.map(sale => sale.cashier || 'Unassigned'))].sort();
+            cashierSelect.innerHTML = cashiers.length
+                ? cashiers.map(cashier => `<option value="${escapeEndOfDayHtml(cashier)}">${escapeEndOfDayHtml(cashier)}</option>`).join('')
+                : '<option value="">No cashier records</option>';
+            renderEndOfDayReading();
+        }
+
+        function setEndOfDayMode(mode) {
+            endOfDayMode = mode;
+            document.getElementById('eod-x-button').classList.toggle('active', mode === 'x');
+            document.getElementById('eod-z-button').classList.toggle('active', mode === 'z');
+            document.getElementById('eod-cashier-field').style.display = mode === 'x' ? 'flex' : 'none';
+            renderEndOfDayReading();
+        }
+
+        function renderEndOfDayReading() {
+            const receipt = document.getElementById('eod-receipt');
+            if (!receipt) return;
+            const from = document.getElementById('eod-from').value;
+            const to = document.getElementById('eod-to').value;
+            const cashier = document.getElementById('eod-cashier').value;
+            const selectedSales = endOfDaySales.filter(sale => {
+                const saleDate = endOfDaySaleDate(sale);
+                return saleDate && (!from || saleDate >= from) && (!to || saleDate <= to) && (endOfDayMode === 'z' || sale.cashier === cashier);
+            });
+            const totals = selectedSales.reduce((summary, sale) => {
+                let details = sale.receipt_data;
+                try { if (typeof details === 'string') details = JSON.parse(details); } catch (error) { details = {}; }
+                const total = Number(sale.total) || Number(details.total) || 0;
+                const method = details.paymentMethod || 'Unspecified';
+                summary.gross += total;
+                summary.vatable += Number(details.vatableSales) || Math.max(0, total / 1.12);
+                summary.vat += Number(details.vatAmount) || Math.max(0, total - (total / 1.12));
+                summary.payments[method] = (summary.payments[method] || 0) + total;
+                return summary;
+            }, { gross: 0, vatable: 0, vat: 0, payments: {} });
+            const period = `${from || 'Beginning'} to ${to || 'Today'}`;
+            const readingName = endOfDayMode === 'x' ? 'X-READING' : 'Z-READING';
+            const cashierLabel = endOfDayMode === 'x' ? (cashier || 'No cashier selected') : 'All cashiers';
+            const paymentLines = Object.keys(totals.payments).length
+                ? Object.entries(totals.payments).map(([method, amount]) => `<div class="eod-receipt-line"><span>${escapeEndOfDayHtml(method)}</span><span>${endOfDayMoney(amount)}</span></div>`).join('')
+                : '<div class="eod-receipt-line"><span>No payments</span><span>PHP 0.00</span></div>';
+            const transactions = selectedSales.length
+                ? selectedSales.map(sale => `<div class="eod-transaction"><span>#${sale.id} · ${escapeEndOfDayHtml(sale.cashier || 'Unassigned')}</span><strong>${endOfDayMoney(sale.total)}</strong><small>${escapeEndOfDayHtml(sale.date || '')}</small></div>`).join('')
+                : '<div class="eod-empty">No completed transactions for this selection.</div>';
+
+            receipt.innerHTML = `<div class="eod-receipt-head"><h3>${escapeEndOfDayHtml('<%= settings.app_name || 'RxPOS' %>')}</h3><p class="eod-receipt-title">${readingName}</p><p>END OF DAY SALES READING</p></div><div class="eod-receipt-meta"><div class="eod-receipt-line"><span>Period</span><span>${escapeEndOfDayHtml(period)}</span></div><div class="eod-receipt-line"><span>Cashier</span><span>${escapeEndOfDayHtml(cashierLabel)}</span></div><div class="eod-receipt-line"><span>Printed</span><span>${escapeEndOfDayHtml(new Date().toLocaleString())}</span></div></div><div class="eod-receipt-section"><div class="eod-receipt-line"><span>Transactions</span><span>${selectedSales.length}</span></div><div class="eod-receipt-line eod-receipt-total"><span>GROSS SALES</span><span>${endOfDayMoney(totals.gross)}</span></div><div class="eod-receipt-line"><span>VATable sales</span><span>${endOfDayMoney(totals.vatable)}</span></div><div class="eod-receipt-line"><span>VAT (12%)</span><span>${endOfDayMoney(totals.vat)}</span></div></div><div class="eod-receipt-section"><strong>PAYMENT SUMMARY</strong>${paymentLines}</div><div class="eod-receipt-section"><strong>TRANSACTION LOG</strong>${transactions}</div><div class="eod-receipt-head" style="border:0; padding:12px 0 0;"><p>*** END OF READING ***</p></div>`;
+        }
+
+        function printEndOfDayReading() {
+            const content = document.getElementById('eod-receipt');
+            if (!content) return;
+            const printWindow = window.open('', '_blank', 'width=600,height=800');
+            if (!printWindow) return alert('Please allow pop-ups to print the End of Day reading.');
+            printWindow.document.write(`<html><head><title>End of Day Reading</title><style>body{margin:0;padding:20px;background:#fff}.eod-receipt{max-width:510px;margin:auto;padding:26px;box-sizing:border-box;color:#111827;border:1px dashed #94a3b8;font-family:'Courier New',monospace;font-size:12px;line-height:1.5}.eod-receipt h3,.eod-receipt p{margin:0}.eod-receipt-head{text-align:center;padding-bottom:12px;border-bottom:1px dashed #111827}.eod-receipt-title{letter-spacing:1px;font-size:16px}.eod-receipt-meta,.eod-receipt-section{padding:10px 0;border-bottom:1px dashed #111827}.eod-receipt-line{display:flex;justify-content:space-between;gap:14px}.eod-receipt-total{font-size:14px;font-weight:bold;padding:6px 0;border-top:1px solid #111827;border-bottom:1px solid #111827}.eod-transaction{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:7px 0;border-bottom:1px dotted #94a3b8}.eod-transaction small{grid-column:1/-1;color:#475569}.eod-empty{text-align:center;color:#64748b;padding:20px 0}</style></head><body>${content.outerHTML}</body></html>`);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        }
+
+        function addManualBatchLine() {
+            const lines = document.getElementById('manual-batch-lines');
+            if (!lines) return;
+            const row = document.createElement('tr');
+            row.innerHTML = '<td><input name="name" placeholder="Product name"></td><td><input name="sku" placeholder="SKU"></td><td><input name="barcode" placeholder="Barcode"></td><td><input name="description" placeholder="Description"></td><td><input name="cost" type="number" min="0" step="0.01" placeholder="0.00"></td><td><input name="price" type="number" min="0" step="0.01" placeholder="0.00"></td><td><input name="stock" type="number" min="0" step="1" value="0"></td><td><button class="batch-remove" type="button" onclick="removeManualBatchLine(this)">Remove</button></td>';
+            lines.appendChild(row);
+        }
+
+        function removeManualBatchLine(button) {
+            const lines = document.getElementById('manual-batch-lines');
+            if (lines.children.length === 1) {
+                lines.firstElementChild.querySelectorAll('input').forEach(input => { input.value = input.name === 'stock' ? '0' : ''; });
+                return;
+            }
+            button.closest('tr').remove();
+        }
+
+        const manualBatchForm = document.getElementById('manual-batch-form');
+        if (manualBatchForm) {
+            addManualBatchLine();
+            manualBatchForm.addEventListener('submit', async event => {
+                event.preventDefault();
+                const items = [...document.querySelectorAll('#manual-batch-lines tr')].map(row => ({
+                    name: row.querySelector('[name="name"]').value, sku: row.querySelector('[name="sku"]').value,
+                    barcode: row.querySelector('[name="barcode"]').value, description: row.querySelector('[name="description"]').value,
+                    cost: row.querySelector('[name="cost"]').value, price: row.querySelector('[name="price"]').value,
+                    stock: row.querySelector('[name="stock"]').value
+                }));
+                const status = document.getElementById('manual-batch-status');
+                status.style.color = '#475569';
+                status.textContent = 'Saving batch...';
+                try {
+                    const response = await fetch('/inventory/manual-batch', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ batch_no: document.getElementById('manual-batch-number').value, category: document.getElementById('manual-batch-category').value, expiry_date: document.getElementById('manual-batch-expiry').value, items })
+                    });
+                    const result = await response.json();
+                    status.style.color = result.success ? '#047857' : '#b91c1c';
+                    status.textContent = result.message;
+                    if (result.success) setTimeout(() => location.reload(), 900);
+                } catch (error) {
+                    status.style.color = '#b91c1c';
+                    status.textContent = 'Unable to save this batch.';
+                }
+            });
+        }
+
+        const registryImportForm = document.getElementById('registry-import-form');
+        if (registryImportForm) {
+            registryImportForm.addEventListener('submit', async event => {
+                event.preventDefault();
+                const status = document.getElementById('registry-import-status');
+                const fileInput = document.getElementById('registry-file');
+                if (!fileInput.files.length) return;
+                status.style.color = '#475569';
+                status.textContent = 'Reading product file...';
+                try {
+                    const response = await fetch('/inventory/import', { method: 'POST', body: new FormData(registryImportForm) });
+                    const result = await response.json();
+                    status.style.color = result.success ? '#047857' : '#b91c1c';
+                    status.textContent = result.message;
+                    if (result.success) setTimeout(() => location.reload(), 900);
+                } catch (error) {
+                    status.style.color = '#b91c1c';
+                    status.textContent = 'Upload failed. Please try again.';
+                }
+            });
+        }
+
+        async function updateRegistryPrice(productId) {
+            const input = document.getElementById(`price-${productId}`);
+            const price = Number(input.value);
+            if (!Number.isFinite(price) || price < 0) return alert('Enter a valid non-negative price.');
+            try {
+                const response = await fetch('/inventory/update-price', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId, price })
+                });
+                const result = await response.json();
+                if (!result.success) return alert(result.message);
+                location.reload();
+            } catch (error) {
+                alert('Unable to update the product price.');
+            }
+        }
+
+        function filterRegistryRows() {
+            const search = (document.getElementById('registry-search').value || '').trim().toLowerCase();
+            document.querySelectorAll('#registry-rows tr').forEach(row => {
+                row.style.display = row.dataset.registrySearch.includes(search) ? '' : 'none';
+            });
+        }
+
+        initializeEndOfDay();
     </script>
 </body>
 </html>

@@ -11,6 +11,7 @@
         .pos-header { background: #2c3e50; color: white; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; height: 50px; flex-shrink: 0; }
         .pos-header h2 { margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
         .pos-header .user-info { font-size: 0.9rem; display: flex; gap: 15px; align-items: center; }
+        .pos-header .clock { font-size: 0.9rem; color: #e6eef6; margin-right: 12px; }
         .pos-header a { color: #e74c3c; text-decoration: none; font-weight: 600; }
 
         .app-layout { display: flex; flex: 1; height: calc(100vh - 50px); overflow: hidden; }
@@ -54,6 +55,9 @@
         .product-tile h4 { margin: 0; font-size: 0.9rem; color: #1e293b; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-weight: 400; }
         .product-tile .price { color: #10b981; font-weight: 600; font-size: 0.95rem; margin: 5px 0; }
         .product-tile .stock { font-size: 0.75rem; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; align-self: center; }
+        .product-tile.out-of-stock { border-color: #ef4444; color: #b91c1c; opacity: 0.95; }
+        .product-tile.out-of-stock .price { color: #b91c1c; }
+        .product-tile.out-of-stock .stock { background: #fee2e2; color: #7f1d1d; }
 
         .module-content { padding: 25px; width: 100%; overflow-y: auto; background: #f8fafc; }
         .card { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.04); margin-bottom: 20px; border: 1px solid #e2e8f0; }
@@ -113,7 +117,7 @@
         .registry-header h2 { margin: 0; font-size: 1.35rem; }
         .registry-header p { margin: 5px 0 0; color: #64748b; font-size: 0.9rem; }
         .registry-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-        .registry-btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; color: #334155; font: inherit; font-size: 0.86rem; font-weight: 600; text-decoration: none; cursor: pointer; }
+        .registry-btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 12px; border-radius: 6px; border: 1px solid #e5e7eb; background: #f3f4f6; color: #334155; font: inherit; font-size: 0.86rem; font-weight: 600; text-decoration: none; cursor: pointer; }
         .registry-btn.primary { color: #fff; border-color: #2563eb; background: #2563eb; }
         .registry-metrics { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
         .registry-metric { padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; }
@@ -214,6 +218,7 @@
             <span style="font-size: 0.8rem; background: #1abc9c; padding: 2px 8px; border-radius: 4px; font-weight: 400;">Enterprise</span>
         </h2>
         <div class="user-info">
+            <span class="clock" id="live-clock"></span>
             <span>Cashier: <strong><%= user %></strong></span>
             <a href="/logout">Log Out</a>
         </div>
@@ -278,6 +283,8 @@
                                 <button class="key-btn" onclick="appendKey('9')">9</button>
                                 <button class="key-btn action" id="btn-price" onclick="setMode('price')">Price</button>
                                 <button class="key-btn" onclick="clearCartInput()">C</button>
+                                <button class="key-btn action" onclick="voidSelectedItem()">Void Item</button>
+                                <button class="key-btn action" onclick="clearCart()">Clear Cart</button>
                                 <button class="key-btn" onclick="appendKey('0')">0</button>
                                 <button class="key-btn" onclick="appendKey('.')">.</button>
                                 <button class="key-btn action" onclick="deleteLastInput()">⌫</button>
@@ -292,11 +299,15 @@
                             <button class="cat-btn">OTC</button>
                             <button class="cat-btn">Prescription (Rx)</button>
                         </div>
+                        <div style="display:flex; gap:8px; align-items:center; padding: 12px 15px;">
+                            <input id="pos-product-search" class="form-control" placeholder="Search product, SKU, barcode..." oninput="filterProductTiles()">
+                            <button class="registry-btn" type="button" onclick="filterProductTiles()">Search</button>
+                        </div>
                         <div class="products-grid-container">
                             <% products.forEach(p => { %>
-                                <div class="product-tile" onclick="addToCart('<%= p.id %>', '<%= p.name %>', <%= p.price %>, <%= p.stock %>, '<%= p.requires_prescription %>')">
+                                <div class="product-tile <%= p.stock <= 0 ? 'out-of-stock' : '' %>" data-search="<%= [p.name, p.sku, p.barcode, p.description].join(' ').toLowerCase() %>" onclick="addToCart('<%= p.id %>', '<%= p.name.replace(/'/g, "\\'") %>', <%= p.price %>, <%= p.stock %>, '<%= p.requires_prescription %>')">
                                     <h4><%= p.name %></h4>
-                                    <div class="price">₱<%= p.price.toFixed(2) %></div>
+                                    <div class="price">₱<%= Number(p.price).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></div>
                                     <div class="stock">Stock: <%= p.stock %></div>
                                 </div>
                             <% }) %>
@@ -311,13 +322,13 @@
                     <% const registryPotentialRevenue = products.reduce((total, product) => total + ((Number(product.price) || 0) - (Number(product.cost) || 0)) * (Number(product.stock) || 0), 0); %>
                     <div class="registry-header">
                         <div><h2>Product Registry</h2><p>Upload a standard Excel product file, update prices strategically, and download current reports.</p></div>
-                        <div class="registry-actions"><a class="registry-btn" href="/inventory/export.xlsx">Download Excel</a><a class="registry-btn" href="/inventory/export.pdf">Download PDF</a></div>
+                        <div class="registry-actions"><a class="registry-btn" href="/inventory/export.xlsx">Download Excel</a><a class="registry-btn" href="/inventory/export.pdf">Download PDF</a><button class="registry-btn" type="button" onclick="openPriceUpdateSelector()">Price Update</button><button class="registry-btn" type="button" onclick="openDeliveryModal()">Receive Delivery</button></div>
                     </div>
                     <div class="registry-metrics">
                         <div class="registry-metric"><span>Registered items</span><strong><%= inventorySummary.totalProducts %></strong></div>
-                        <div class="registry-metric"><span>Stock value</span><strong>PHP <%= inventorySummary.totalStockValue.toFixed(2) %></strong></div>
+                        <div class="registry-metric"><span>Stock value</span><strong>PHP <%= Number(inventorySummary.totalStockValue).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></strong></div>
                         <div class="registry-metric"><span>Low stock</span><strong><%= inventorySummary.lowStockCount %></strong></div>
-                        <div class="registry-metric"><span>Possible revenue</span><strong>PHP <%= registryPotentialRevenue.toFixed(2) %></strong></div>
+                        <div class="registry-metric"><span>Possible revenue</span><strong>PHP <%= Number(registryPotentialRevenue).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></strong></div>
                     </div>
                     <div class="card registry-import">
                         <form id="registry-import-form" class="registry-dropzone">
@@ -343,11 +354,80 @@
                     </div>
                     <div class="card">
                         <div class="registry-toolbar"><div><h3 style="margin:0;">Registry List</h3><small style="color:#64748b;">Margin = (Price − Cost) ÷ Price. Possible revenue is projected profit from available stock.</small></div><input id="registry-search" class="registry-search" type="search" placeholder="Search item, SKU, barcode..." oninput="filterRegistryRows()"></div>
-                        <div class="registry-table-wrap"><table class="registry-table"><thead><tr><th>Item</th><th>SKU</th><th>Barcode</th><th>Description</th><th class="amount">Cost</th><th class="amount">Price</th><th class="amount">Margin %</th><th class="amount">Possible Revenue</th><th>Price Update</th></tr></thead><tbody id="registry-rows">
+                        <div class="registry-table-wrap"><table class="registry-table"><thead><tr><th>Item</th><th>SKU</th><th>Barcode</th><th>Description</th><th class="amount">Cost</th><th class="amount">Price</th><th class="amount">Margin %</th><th class="amount">Possible Revenue</th><th>Price Update</th><th></th></tr></thead><tbody id="registry-rows">
                         <% products.forEach(product => { const cost = Number(product.cost) || 0; const price = Number(product.price) || 0; const margin = price ? ((price - cost) / price) * 100 : 0; const possibleRevenue = (price - cost) * (Number(product.stock) || 0); %>
-                            <tr data-registry-search="<%= [product.name, product.sku, product.barcode, product.description].join(' ').toLowerCase() %>"><td><strong><%= product.name %></strong><br><small style="color:#64748b;">Stock: <%= product.stock %></small></td><td><%= product.sku || '—' %></td><td><%= product.barcode || '—' %></td><td><%= product.description || '—' %></td><td class="amount">PHP <%= cost.toFixed(2) %></td><td class="amount">PHP <%= price.toFixed(2) %></td><td class="amount"><%= margin.toFixed(1) %>%</td><td class="amount">PHP <%= possibleRevenue.toFixed(2) %></td><td><input id="price-<%= product.id %>" class="registry-price-input" type="number" min="0" step="0.01" value="<%= price.toFixed(2) %>"><button class="registry-update-btn" type="button" onclick="updateRegistryPrice(<%= product.id %>)">Update</button></td></tr>
+                            <tr data-registry-search="<%= [product.name, product.sku, product.barcode, product.description].join(' ').toLowerCase() %>"><td><strong><%= product.name %></strong><br><small style="color:#64748b;">Stock: <%= product.stock %></small></td><td><%= product.sku || '—' %></td><td><%= product.barcode || '—' %></td><td><%= product.description || '—' %></td><td class="amount">PHP <%= Number(cost).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td><td class="amount">PHP <%= Number(price).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td><td class="amount"><%= margin.toFixed(1) %>%</td><td class="amount">PHP <%= Number(possibleRevenue).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td><td><input id="price-<%= product.id %>" class="registry-price-input" type="number" min="0" step="0.01" value="<%= price.toFixed(2) %>"><button class="registry-update-btn" type="button" onclick="updateRegistryPrice(<%= product.id %>)">Update</button></td><td><button class="registry-btn" type="button" onclick="openPriceUpdateModal('<%= product.id %>', '<%= product.name.replace(/'/g, "\\'") %>', '<%= price.toFixed(2) %>')">Edit</button></td></tr>
                         <% }) %>
                         </tbody></table></div>
+                    </div>
+                    <div id="price-update-selector-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="price-update-selector-title">
+                        <div class="modal-card" style="width: min(95vw, 920px);">
+                            <h3 id="price-update-selector-title">Update Product Prices</h3>
+                            <div class="modal-row"><input id="price-update-filter" type="search" class="form-control" placeholder="Search item, SKU, barcode..." oninput="filterPriceUpdateSelectorRows()"></div>
+                            <div style="max-height:420px; overflow:auto; margin-top: 10px;">
+                                <table class="registry-table" style="width:100%; min-width: 720px;">
+                                    <thead><tr><th>Item</th><th>SKU</th><th>Old Price</th><th>New Price</th><th>Actions</th></tr></thead>
+                                    <tbody id="price-update-selector-rows">
+                                        <% products.forEach(product => { const price = Number(product.price) || 0; %>
+                                            <tr data-price-selector-search="<%= [product.name, product.sku, product.barcode, product.description].join(' ').toLowerCase() %>">
+                                                <td><strong><%= product.name %></strong><br><small style="color:#64748b;">Stock: <%= product.stock %></small></td>
+                                                <td><%= product.sku || '—' %></td>
+                                                <td class="amount">PHP <%= Number(price).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td>
+                                                <td><input id="selector-price-<%= product.id %>" type="number" min="0" step="0.01" class="form-control" value="<%= price.toFixed(2) %>"></td>
+                                                <td style="white-space:nowrap; display:flex; gap:8px;">
+                                                    <button class="registry-btn" type="button" onclick="savePriceUpdateFromSelector('<%= product.id %>', '<%= product.name.replace(/'/g, "\\'") %>')">Save</button>
+                                                    <button class="registry-btn" type="button" onclick="openPriceUpdateModal('<%= product.id %>', '<%= product.name.replace(/'/g, "\\'") %>', '<%= price.toFixed(2) %>')">History</button>
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="modal-actions"><button class="btn btn-cancel" type="button" onclick="closePriceUpdateSelector()">Close</button></div>
+                        </div>
+                    </div>
+                    <!-- Delivery receive modal -->
+                    <div id="delivery-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delivery-title" style="display:none;">
+                        <div class="modal-card" style="width: min(95vw, 920px);">
+                            <h3 id="delivery-title">Receive Delivery</h3>
+                            <div class="modal-row"><label>Receipt No<input id="delivery-receipt-no" class="form-control" placeholder="Enter delivery receipt number"></label></div>
+                            <div style="margin-top:8px;">
+                                <table class="registry-table" style="width:100%; min-width: 720px;">
+                                    <thead><tr><th>Product</th><th>SKU</th><th>Current Stock</th><th>Qty Received</th><th></th></tr></thead>
+                                    <tbody id="delivery-lines">
+                                        <tr>
+                                            <td>
+                                                <select class="form-control" data-line-index="0" id="delivery-product-0" onchange="deliveryProductChanged(this)">
+                                                    <option value="">-- select product --</option>
+                                                    <% products.forEach(p => { %>
+                                                        <option value="<%= p.id %>" data-sku="<%= p.sku %>" data-name="<%= p.name.replace(/'/g, "\\'") %>" data-stock="<%= p.stock %>"><%= p.name %> (<%= p.sku || '—' %>)</option>
+                                                    <% }) %>
+                                                </select>
+                                            </td>
+                                            <td><input id="delivery-sku-0" class="form-control" readonly></td>
+                                            <td><input id="delivery-stock-0" class="form-control" readonly></td>
+                                            <td><input id="delivery-qty-0" class="form-control" type="number" min="0" value="0"></td>
+                                            <td><button class="registry-btn" type="button" onclick="removeDeliveryLine(this)">Remove</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div style="margin-top:10px;"><button class="registry-btn" type="button" onclick="addDeliveryLine()">+ Add line</button></div>
+                            </div>
+                            <div class="modal-actions" style="margin-top:12px;"><button class="btn btn-cancel" type="button" onclick="closeDeliveryModal()">Cancel</button><button class="btn btn-confirm" type="button" onclick="saveDelivery()">Receive & Print</button></div>
+                            <div id="delivery-status" style="margin-top:10px; color:#475569;"></div>
+                        </div>
+                    </div>
+
+                    <div id="price-update-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="price-update-title">
+                        <div class="modal-card">
+                            <h3 id="price-update-title">Update Product Price</h3>
+                            <div class="modal-row"><label>Item<input id="price-update-item" type="text" readonly></label></div>
+                            <div class="modal-row"><label>Old Price<input id="price-update-old" type="text" readonly></label></div>
+                            <div class="modal-row"><label>New Price<input id="price-update-new" type="number" min="0" step="0.01"></label></div>
+                            <div class="modal-row"><label>Change Log</label><div id="price-update-log" style="max-height:220px; overflow:auto; padding:12px; border:1px solid #cbd5e1; border-radius:8px; background:#f8fafc;"></div></div>
+                            <div class="modal-actions"><button class="btn btn-cancel" type="button" onclick="closePriceUpdateModal()">Cancel</button><button class="btn btn-confirm" type="button" onclick="savePriceUpdate()">Save Price</button></div>
+                            <div id="price-update-status" style="margin-top:10px; color:#475569;"></div>
+                        </div>
                     </div>
                     <div class="registry-legacy" aria-hidden="true">
                     <div class="card" style="display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px;">
@@ -357,7 +437,7 @@
                         </div>
                         <div style="background: #f5f3ff; padding: 18px; border-radius: 12px;">
                             <h3 style="margin-top:0;">Kabuuang Halaga ng Stock</h3>
-                            <p style="font-size: 2rem; font-weight: 700; margin: 8px 0 0 0;">₱<%= inventorySummary.totalStockValue.toFixed(2) %></p>
+                            <p style="font-size: 2rem; font-weight: 700; margin: 8px 0 0 0;">₱<%= Number(inventorySummary.totalStockValue).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></p>
                         </div>
                         <div style="background: #ffefeb; padding: 18px; border-radius: 12px;">
                             <h3 style="margin-top:0;">Mababang Stock</h3>
@@ -372,7 +452,7 @@
 
                     <div class="card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                         <div style="min-width: 0;">
-                            <h3>Magdagdag ng Bagong Produkto</h3>
+                            <h3>Add New Product</h3>
                             <form action="/add-product" method="POST">
                                 <input type="text" name="name" class="form-control" placeholder="Pangalan ng Gamot" required>
                                 <input type="text" name="category" class="form-control" placeholder="Kategorya (OTC / Prescription)" required>
@@ -380,8 +460,8 @@
                                 <input type="number" name="stock" class="form-control" placeholder="Dami ng Stock" required>
                                 <input type="text" name="batch_no" class="form-control" placeholder="Batch / Lot Number" required>
                                 <input type="date" name="expiry_date" class="form-control" required>
-                                <label style="font-size: 0.9rem; display: block; margin-bottom: 15px;"><input type="checkbox" name="requires_prescription" value="1"> Kailangan ng Reseta (Rx)?</label>
-                                <button type="submit" class="btn" style="background: #8e44ad; width: 100%;">I-save sa Imbentaryo</button>
+                                <label style="font-size: 0.9rem; display: block; margin-bottom: 15px;"><input type="checkbox" name="requires_prescription" value="1"> Requires Prescription (Rx)?</label>
+                                <button type="submit" class="btn" style="background: #8e44ad; width: 100%;">Save to Inventory</button>
                             </form>
                         </div>
                         <div style="min-width: 0;">
@@ -403,7 +483,7 @@
                     </div>
 
                     <div class="card" style="margin-top: 20px;">
-                        <h3>Kasulukuyang Listahan ng Imbentaryo</h3>
+                        <h3>Current Inventory List</h3>
                         <table>
                             <thead>
                                 <tr>
@@ -422,7 +502,7 @@
                                         <td><%= product.name %></td>
                                         <td><%= product.category %></td>
                                         <td><%= product.stock %></td>
-                                        <td>₱<%= product.price.toFixed(2) %></td>
+                                        <td>₱<%= Number(product.price).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td>
                                         <td><%= product.expiry_date %></td>
                                     </tr>
                                 <% }) %>
@@ -441,7 +521,7 @@
                         <p class="admin-dashboard-subtitle">Pamahalaan ang branding at user accounts ng system.</p>
                         <div class="admin-tabs" role="tablist" aria-label="Admin dashboard sections">
                             <button type="button" class="admin-tab active" role="tab" aria-selected="true" onclick="switchAdminTab('branding', this)">Branding</button>
-                            <button type="button" class="admin-tab" role="tab" aria-selected="false" onclick="switchAdminTab('users', this)">Gumawa ng User</button>
+                            <button type="button" class="admin-tab" role="tab" aria-selected="false" onclick="switchAdminTab('users', this)">Create User</button>
                         </div>
                         <div id="admin-tab-branding" class="admin-tab-panel active" role="tabpanel">
                             <h3>App Branding</h3>
@@ -459,11 +539,11 @@
                                         I-paste ang logo URL para lumabas sa tuktok na header.
                                     </div>
                                 </div>
-                                <button type="submit" class="btn" style="background: #2563eb; width: 100%;">I-save ang Branding</button>
+                                <button type="submit" class="btn" style="background: #2563eb; width: 100%;">Save Branding</button>
                             </form>
                         </div>
                         <div id="admin-tab-users" class="admin-tab-panel" role="tabpanel">
-                            <h3>Gumawa ng User</h3>
+                            <h3>Create User</h3>
                             <p style="margin-top: 0; color: #475569;">Magdagdag ng bagong user at piliin ang mga module na pwedeng ma-access.</p>
                             <form action="/admin/create-user" method="POST">
                                 <input type="text" name="username" class="form-control" placeholder="Username" required>
@@ -481,7 +561,7 @@
                                     <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="admin"> Admin Branding</label>
                                     <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="users"> User Management</label>
                                 </div>
-                                <button type="submit" class="btn" style="background: #16a34a; width: 100%;">Lumikha ng User</button>
+                                <button type="submit" class="btn" style="background: #16a34a; width: 100%;">Create User</button>
                             </form>
                         </div>
                     </div>
@@ -551,7 +631,7 @@
                                     <label style="display:flex; gap: 8px; align-items:center;"><input id="check-admin" type="checkbox" name="allowed_pages" value="admin"> Admin Branding</label>
                                     <label style="display:flex; gap: 8px; align-items:center;"><input id="check-users" type="checkbox" name="allowed_pages" value="users"> User Management</label>
                                 </div>
-                                <button type="submit" class="btn" style="background: #2563eb; width: 100%;">I-save ang Access</button>
+                                <button type="submit" class="btn" style="background: #2563eb; width: 100%;">Save Access</button>
                             </form>
                         </div>
                     </div>
@@ -563,12 +643,12 @@
             <div id="pane-prescriptions" class="module-pane <%= firstAllowedPage === 'prescriptions' ? 'active' : '' %>">
                 <div class="module-content">
                     <div class="card" style="max-width: 600px; margin: 0 auto 20px auto;">
-                        <h3>I-validate at I-save ang Reseta (Rx)</h3>
+                        <h3>Validate and Save Prescription (Rx)</h3>
                         <form action="/add-prescription" method="POST">
                             <input type="text" name="patient_name" class="form-control" placeholder="Pangalan ng Pasyente" required>
                             <input type="text" name="doctor_name" class="form-control" placeholder="Pangalan ng Doktor" required>
                             <input type="text" name="medicine_name" class="form-control" placeholder="Resetang Gamot" required>
-                            <button type="submit" class="btn" style="background: #2980b9; width: 100%;">I-save ang Reseta</button>
+                            <button type="submit" class="btn" style="background: #2980b9; width: 100%;">Save Prescription</button>
                         </form>
                     </div>
                     <div class="card" style="max-width: 800px; margin: 0 auto;">
@@ -596,14 +676,14 @@
             <div id="pane-sales" class="module-pane <%= firstAllowedPage === 'sales' ? 'active' : '' %>">
                 <div class="module-content">
                     <div class="card" style="max-width: 900px; margin: 0 auto;">
-                        <h3>Sales History & Logs <span style="font-size: 0.8rem; color: #64748b; font-weight: normal;">(I-click ang row para makita ang resibo)</span></h3>
+                        <h3>Sales History & Logs <span style="font-size: 0.8rem; color: #64748b; font-weight: normal;">(Click a row to view the receipt)</span></h3>
                         <table>
                             <thead><tr><th>Sale ID</th><th>Total Amount</th><th>Cashier</th><th>Date</th></tr></thead>
                             <tbody>
                                 <% sales.forEach(s => { %>
                                     <tr class="sales-row" onclick='viewReceipt(<%- s.receipt_data %>)'>
                                         <td>#<%= s.id %></td>
-                                        <td style="color: #27ae60; font-weight: bold;">₱<%= s.total.toFixed(2) %></td>
+                                        <td style="color: #27ae60; font-weight: bold;">₱<%= Number(s.total).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td>
                                         <td><%= s.cashier %></td>
                                         <td><%= s.date %></td>
                                     </tr>
@@ -810,11 +890,26 @@
             document.getElementById('btn-' + mode).classList.add('active-mode');
         }
 
+        function startLiveClock(){
+            const el = document.getElementById('live-clock');
+            if (!el) return;
+            function tick(){ el.textContent = new Date().toLocaleTimeString(); }
+            tick();
+            setInterval(tick, 1000);
+        }
+        startLiveClock();
+
         function addToCart(id, name, price, stock, requiresRx) {
+            // Prevent adding items with zero stock
+            if (Number(stock) <= 0) {
+                alert('Item is out of stock.');
+                return;
+            }
+
             if (requiresRx === '1') {
-                let hasRx = confirm(`Ang "${name}" ay nangangailangan ng Prescription (Rx). May reseta ba ang pasyente?`);
+                let hasRx = confirm(`The item "${name}" requires a prescription (Rx). Does the patient have one?`);
                 if (!hasRx) {
-                    alert('Hindi maidadagdag hangga’t walang reseta.');
+                    alert('Cannot add without prescription.');
                     return;
                 }
             }
@@ -822,7 +917,7 @@
             let item = cart.find(i => i.id === id);
             if (item) {
                 if (item.qty + 1 > stock) {
-                    alert('Kulang ang stock ng gamot na ito!');
+                    alert('Insufficient stock for this item!');
                     return;
                 }
                 item.qty++;
@@ -830,6 +925,22 @@
                 cart.push({ id, name, price, originalPrice: price, qty: 1, discount: 0 });
             }
             selectedIndex = cart.length - 1;
+            updateCartUI();
+        }
+
+        function clearCart(){
+            if (!confirm('Clear entire cart?')) return;
+            cart = [];
+            selectedIndex = null;
+            updateCartUI();
+        }
+
+        function voidSelectedItem(){
+            if (selectedIndex === null) { alert('No item selected to void.'); return; }
+            if (!confirm('Void selected item?')) return;
+            cart.splice(selectedIndex, 1);
+            if (cart.length === 0) selectedIndex = null;
+            else selectedIndex = Math.min(selectedIndex, cart.length - 1);
             updateCartUI();
         }
 
@@ -891,30 +1002,32 @@
             let totalDiscount = 0;
 
             cart.forEach((item, index) => {
-                let itemTotal = (item.price * item.qty) - item.discount;
+                let itemTotal = (item.price * item.qty) - (item.discount || 0);
                 total += itemTotal;
                 totalDiscount += (item.discount || 0);
 
                 let isSelected = index === selectedIndex ? 'selected' : '';
+                const priceStr = Number(item.price).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+                const itemTotalStr = Number(itemTotal).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
                 tbody.innerHTML += `<tr class="${isSelected}" onclick="selectItem(${index})">
                     <td>${item.name}</td>
                     <td>${item.qty}</td>
-                    <td>₱${item.price.toFixed(2)}</td>
-                    <td>₱${itemTotal.toFixed(2)}</td>
+                    <td>₱${priceStr}</td>
+                    <td>₱${itemTotalStr}</td>
                 </tr>`;
             });
 
-            totalSpan.innerText = total.toFixed(2);
-            discountSpan.innerText = totalDiscount.toFixed(2);
+            totalSpan.innerText = Number(total).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+            discountSpan.innerText = Number(totalDiscount).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
         }
 
         function openPaymentModal() {
             if (cart.length === 0) {
-                alert('Walang laman ang cart!');
+                alert('Cart is empty!');
                 return;
             }
             let total = cart.reduce((sum, item) => sum + ((item.price * item.qty) - (item.discount || 0)), 0);
-            document.getElementById('modal-total-display').value = '₱' + total.toFixed(2);
+            document.getElementById('modal-total-display').value = '₱' + total.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
             
             selectPaymentMethod('Cash');
             document.getElementById('paymentModal').style.display = 'flex';
@@ -934,7 +1047,7 @@
             let total = cart.reduce((sum, item) => sum + ((item.price * item.qty) - (item.discount || 0)), 0);
             let tendered = parseFloat(document.getElementById('modal-tendered').value) || 0;
             let change = tendered - total;
-            document.getElementById('modal-change').value = change >= 0 ? '₱' + change.toFixed(2) : 'Kulang ang bayad';
+            document.getElementById('modal-change').value = change >= 0 ? '₱' + change.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : 'Insufficient payment';
         }
 
         function confirmCheckout() {
@@ -942,7 +1055,7 @@
             let tendered = parseFloat(document.getElementById('modal-tendered').value) || 0;
 
             if (selectedPaymentMethod === 'Cash' && tendered < total) {
-                alert('Kulang ang ibinigay na bayad ng customer!');
+                alert('Insufficient tendered amount!');
                 return;
             }
 
@@ -957,7 +1070,7 @@
                     closePaymentModal();
                     showReceiptModal(data.receiptData);
                 } else {
-                    alert('May error: ' + data.message);
+                    alert('Error: ' + data.message);
                 }
             });
         }
@@ -966,12 +1079,12 @@
             document.getElementById('rec-id').innerText = rec.saleId;
             document.getElementById('rec-date').innerText = rec.date;
             document.getElementById('rec-cashier').innerText = rec.cashier;
-            document.getElementById('rec-vatable').innerText = rec.vatableSales.toFixed(2);
-            document.getElementById('rec-vat').innerText = rec.vatAmount.toFixed(2);
-            document.getElementById('rec-total').innerText = rec.total.toFixed(2);
+            document.getElementById('rec-vatable').innerText = Number(rec.vatableSales).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+            document.getElementById('rec-vat').innerText = Number(rec.vatAmount).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+            document.getElementById('rec-total').innerText = Number(rec.total).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
             document.getElementById('rec-method').innerText = rec.paymentMethod;
-            document.getElementById('rec-tendered').innerText = rec.tendered.toFixed(2);
-            document.getElementById('rec-change').innerText = rec.change.toFixed(2);
+            document.getElementById('rec-tendered').innerText = Number(rec.tendered).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+            document.getElementById('rec-change').innerText = Number(rec.change).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
 
             let tbody = document.getElementById('rec-items');
             tbody.innerHTML = '';
@@ -980,8 +1093,8 @@
                 tbody.innerHTML += `<tr>
                     <td>${item.name}</td>
                     <td style="text-align:center;">${item.qty}</td>
-                    <td style="text-align:right;">${item.price.toFixed(2)}</td>
-                    <td style="text-align:right;">${subtotal.toFixed(2)}</td>
+                    <td style="text-align:right;">${Number(item.price).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                    <td style="text-align:right;">${Number(subtotal).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                 </tr>`;
             });
 
@@ -1030,7 +1143,7 @@
         }
 
         function endOfDayMoney(value) {
-            return `PHP ${(Number(value) || 0).toFixed(2)}`;
+            return `PHP ${Number(value || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
         }
 
         function initializeEndOfDay() {
@@ -1185,6 +1298,260 @@
                 alert('Unable to update the product price.');
             }
         }
+
+        function openPriceUpdateModal(productId, productName, currentPrice) {
+            const modal = document.getElementById('price-update-modal');
+            const itemField = document.getElementById('price-update-item');
+            const oldField = document.getElementById('price-update-old');
+            const newField = document.getElementById('price-update-new');
+            const logContainer = document.getElementById('price-update-log');
+            const status = document.getElementById('price-update-status');
+
+            if (!modal || !itemField || !oldField || !newField || !logContainer || !status) return;
+
+            modal.style.display = 'flex';
+            itemField.value = productName;
+            oldField.value = `PHP ${Number(currentPrice).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+            newField.value = Number(currentPrice).toFixed(2);
+            status.textContent = '';
+            logContainer.innerHTML = '<p style="margin:0;color:#64748b;">Loading history...</p>';
+            modal.dataset.productId = productId;
+
+            fetch(`/inventory/price-history/${productId}`)
+                .then((response) => response.json())
+                .then((result) => {
+                    if (!result.success) {
+                        logContainer.innerHTML = `<p style="margin:0;color:#b91c1c;">${result.message}</p>`;
+                        return;
+                    }
+
+                    if (!result.logs.length) {
+                        logContainer.innerHTML = '<p style="margin:0;color:#475569;">No price history yet.</p>';
+                        return;
+                    }
+
+                    logContainer.innerHTML = result.logs
+                        .map((log) => `
+                            <div style="margin-bottom:10px; padding:10px; background:#fff; border:1px solid #e2e8f0; border-radius:8px;">
+                                <div style="font-size:0.82rem; color:#475569; margin-bottom:6px;">${new Date(log.createdAt).toLocaleString()} by ${log.changedBy}</div>
+                                <div style="font-size:0.95rem;">Old: PHP ${Number(log.oldPrice).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} → New: PHP ${Number(log.newPrice).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+                            </div>
+                        `)
+                        .join('');
+                })
+                .catch(() => {
+                    logContainer.innerHTML = '<p style="margin:0;color:#b91c1c;">Unable to load price history.</p>';
+                });
+        }
+
+        function openPriceUpdateSelector() {
+            const selector = document.getElementById('price-update-selector-modal');
+            if (!selector) return;
+            selector.style.display = 'flex';
+        }
+
+        function closePriceUpdateSelector() {
+            const selector = document.getElementById('price-update-selector-modal');
+            if (selector) selector.style.display = 'none';
+        }
+
+        function filterPriceUpdateSelectorRows() {
+            const filter = (document.getElementById('price-update-filter').value || '').trim().toLowerCase();
+            document.querySelectorAll('#price-update-selector-rows tr').forEach(row => {
+                row.style.display = row.dataset.priceSelectorSearch.includes(filter) ? '' : 'none';
+            });
+        }
+
+        function filterProductTiles() {
+            const q = (document.getElementById('pos-product-search').value || '').trim().toLowerCase();
+            document.querySelectorAll('.products-grid-container .product-tile').forEach(tile => {
+                const text = (tile.dataset.search || '').toLowerCase();
+                tile.style.display = text.includes(q) ? '' : 'none';
+            });
+        }
+
+        async function savePriceUpdateFromSelector(productId, productName) {
+            const input = document.getElementById(`selector-price-${productId}`);
+            if (!input) return;
+            const price = Number(input.value);
+            if (!Number.isFinite(price) || price < 0) return alert('Enter a valid non-negative price.');
+
+            try {
+                const response = await fetch('/inventory/update-price', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId, price })
+                });
+                const result = await response.json();
+                if (!result.success) return alert(result.message);
+                location.reload();
+            } catch (error) {
+                alert('Unable to update the product price.');
+            }
+        }
+
+        function closePriceUpdateModal() {
+            const modal = document.getElementById('price-update-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function savePriceUpdate() {
+            const modal = document.getElementById('price-update-modal');
+            if (!modal) return;
+            const productId = modal.dataset.productId;
+            const newField = document.getElementById('price-update-new');
+            const status = document.getElementById('price-update-status');
+            const price = Number(newField.value);
+
+            if (!Number.isFinite(price) || price < 0) {
+                status.style.color = '#b91c1c';
+                status.textContent = 'Enter a valid non-negative price.';
+                return;
+            }
+
+            status.style.color = '#475569';
+            status.textContent = 'Saving price update...';
+
+            try {
+                const response = await fetch('/inventory/update-price', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId, price })
+                });
+                const result = await response.json();
+                if (!result.success) {
+                    status.style.color = '#b91c1c';
+                    status.textContent = result.message;
+                    return;
+                }
+                status.style.color = '#047857';
+                status.textContent = 'Price updated successfully.';
+                setTimeout(() => location.reload(), 700);
+            } catch (error) {
+                status.style.color = '#b91c1c';
+                status.textContent = 'Unable to update the price.';
+            }
+        }
+
+        // Delivery modal functions
+        function openDeliveryModal() {
+            const modal = document.getElementById('delivery-modal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            document.getElementById('delivery-receipt-no').value = '';
+            const tbody = document.getElementById('delivery-lines');
+            // reset to single empty row
+            while (tbody.children.length > 1) tbody.removeChild(tbody.lastElementChild);
+            const first = tbody.querySelector('tr');
+            if (first) {
+                first.querySelectorAll('input').forEach(i => i.value = '');
+                const sel = first.querySelector('select');
+                if (sel) sel.selectedIndex = 0;
+            }
+        }
+
+        function closeDeliveryModal() {
+            const modal = document.getElementById('delivery-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function deliveryProductChanged(sel) {
+            const id = sel.id || '';
+            const idx = id.split('-').pop();
+            const skuInput = document.getElementById(`delivery-sku-${idx}`);
+            const stockInput = document.getElementById(`delivery-stock-${idx}`);
+            const opt = sel.selectedOptions && sel.selectedOptions[0];
+            if (opt) {
+                if (skuInput) skuInput.value = opt.dataset.sku || '';
+                if (stockInput) stockInput.value = opt.dataset.stock || '';
+            }
+        }
+
+        function addDeliveryLine() {
+            const tbody = document.getElementById('delivery-lines');
+            const idx = tbody.children.length;
+            const first = tbody.querySelector('tr');
+            if (!first) return;
+            const clone = first.cloneNode(true);
+            // update ids
+            clone.querySelectorAll('[id]').forEach(el => {
+                el.id = el.id.replace(/-0$/, `-${idx}`);
+            });
+            // reset values
+            clone.querySelectorAll('input').forEach(i => i.value = i.type === 'number' ? '0' : '');
+            const sel = clone.querySelector('select');
+            if (sel) {
+                sel.dataset.lineIndex = idx;
+                sel.id = `delivery-product-${idx}`;
+                sel.selectedIndex = 0;
+                sel.setAttribute('onchange', 'deliveryProductChanged(this)');
+            }
+            // attach remove handler stays same
+            tbody.appendChild(clone);
+        }
+
+        function removeDeliveryLine(btn) {
+            const row = btn.closest('tr');
+            const tbody = document.getElementById('delivery-lines');
+            if (!row || !tbody) return;
+            if (tbody.children.length === 1) {
+                // clear inputs
+                row.querySelectorAll('input').forEach(i => i.value = i.type === 'number' ? '0' : '');
+                const sel = row.querySelector('select'); if (sel) sel.selectedIndex = 0;
+                return;
+            }
+            row.remove();
+        }
+
+        async function saveDelivery() {
+            const status = document.getElementById('delivery-status');
+            const receiptNo = (document.getElementById('delivery-receipt-no').value || '').trim();
+            if (!receiptNo) {
+                status.style.color = '#b91c1c'; status.textContent = 'Enter a delivery receipt number.'; return;
+            }
+            const tbody = document.getElementById('delivery-lines');
+            const lines = [];
+            tbody.querySelectorAll('tr').forEach((tr) => {
+                const sel = tr.querySelector('select');
+                const qtyInput = tr.querySelector('input[type="number"]');
+                const skuInput = tr.querySelector('[id^="delivery-sku-"]');
+                const sku = skuInput ? skuInput.value : '';
+                const name = sel && sel.selectedOptions && sel.selectedOptions[0] ? sel.selectedOptions[0].dataset.name : '';
+                const productId = sel ? sel.value : '';
+                const qty = Number(qtyInput && qtyInput.value) || 0;
+                if (!productId || qty <= 0) return;
+                lines.push({ product: productId, sku, name, qty });
+            });
+
+            if (!lines.length) { status.style.color = '#b91c1c'; status.textContent = 'Add at least one line with qty > 0.'; return; }
+
+            status.style.color = '#475569'; status.textContent = 'Receiving delivery...';
+            try {
+                const response = await fetch('/inventory/receive-delivery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ receiptNo, lines }) });
+                const result = await response.json();
+                if (!result.success) { status.style.color = '#b91c1c'; status.textContent = result.message || 'Unable to receive delivery.'; return; }
+                status.style.color = '#047857'; status.textContent = 'Delivery received. Preparing receipt...';
+
+                // print simple receipt
+                const createdBy = '<%= user %>' || 'system';
+                const now = new Date();
+                let html = `<html><head><title>Delivery ${receiptNo}</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}</style></head><body>`;
+                html += `<h2>Delivery Receipt</h2><p>Receipt No: ${receiptNo}</p><p>Received By: ${createdBy}</p><p>Date: ${now.toLocaleString()}</p>`;
+                html += `<table><thead><tr><th>Product</th><th>SKU</th><th>Qty</th></tr></thead><tbody>`;
+                lines.forEach(l => { html += `<tr><td>${l.name}</td><td>${l.sku}</td><td>${l.qty}</td></tr>`; });
+                html += `</tbody></table><p style="margin-top:20px;">-- End of Receipt --</p></body></html>`;
+
+                const w = window.open('', '_blank');
+                if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); }
+
+                setTimeout(() => location.reload(), 900);
+            } catch (err) {
+                status.style.color = '#b91c1c'; status.textContent = 'Unable to receive delivery.';
+            }
+        }
+
+        window.addEventListener('click', (event) => {
+            const modal = document.getElementById('price-update-modal');
+            if (modal && event.target === modal) {
+                closePriceUpdateModal();
+            }
+        });
 
         function filterRegistryRows() {
             const search = (document.getElementById('registry-search').value || '').trim().toLowerCase();

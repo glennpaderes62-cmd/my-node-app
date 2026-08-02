@@ -3,7 +3,7 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const PDFDocument = require('pdfkit');
 const mongoose = require('mongoose');
-const { Product } = require('../models');
+const { Product, PriceLog } = require('../models');
 const { isAuthenticated } = require('../middleware/auth');
 const { normalizedHeader, readProductRow } = require('../utils/spreadsheet');
 
@@ -218,19 +218,73 @@ router.post('/update-price', isAuthenticated, async (req, res) => {
   }
 
   try {
-    const product = await Product.findByIdAndUpdate(
-      productId,
-      { price },
-      { new: true }
-    );
-
+    const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found.' });
     }
 
+    const oldPrice = Number(product.price) || 0;
+    product.price = price;
+    await product.save();
+
+    await PriceLog.create({
+      product: product._id,
+      oldPrice,
+      newPrice: price,
+      changedBy: String(req.session.user || 'system').trim() || 'system',
+    });
+
     res.json({ success: true, message: 'Price updated successfully.' });
   } catch (error) {
+    console.error('Update price error:', error.message);
     res.status(500).json({ success: false, message: 'Unable to update the price.' });
+  }
+});
+
+// Receive delivery and update inventory quantities
+router.post('/receive-delivery', isAuthenticated, async (req, res) => {
+  const { receiptNo, lines } = req.body || {};
+  if (!receiptNo || !Array.isArray(lines) || !lines.length) {
+    return res.status(400).json({ success: false, message: 'Provide receiptNo and at least one line.' });
+  }
+
+  try {
+    // create delivery record
+    const deliveryDoc = await require('../models/Delivery').create({
+      receiptNo: String(receiptNo).trim(),
+      lines: lines.map(l => ({ product: l.product, sku: l.sku || '', name: l.name || '', qty: Number(l.qty) || 0 })),
+      createdBy: String(req.session.user || 'system').trim() || 'system',
+    });
+
+    // update product stocks
+    for (const ln of deliveryDoc.lines) {
+      if (!mongoose.Types.ObjectId.isValid(ln.product)) continue;
+      await Product.findByIdAndUpdate(ln.product, { $inc: { stock: Number(ln.qty) || 0 } });
+    }
+
+    res.json({ success: true, message: 'Delivery received and inventory updated.' });
+  } catch (error) {
+    console.error('Receive delivery error:', error.message);
+    res.status(500).json({ success: false, message: 'Unable to receive delivery.' });
+  }
+});
+
+router.get('/price-history/:productId', isAuthenticated, async (req, res) => {
+  const productId = String(req.params.productId || '');
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    return res.status(400).json({ success: false, message: 'Invalid product ID.' });
+  }
+
+  try {
+    const logs = await PriceLog.find({ product: productId })
+      .sort({ createdAt: -1 })
+      .limit(25)
+      .lean();
+
+    res.json({ success: true, logs });
+  } catch (error) {
+    console.error('Price history error:', error.message);
+    res.status(500).json({ success: false, message: 'Unable to load price history.' });
   }
 });
 
