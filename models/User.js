@@ -17,8 +17,14 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       required: true,
-      enum: ['superadmin', 'admin', 'cashier', 'staff', 'creator'],
+      enum: ['superadmin', 'admin', 'cashier', 'pharmacist', 'staff', 'creator'],
       default: 'staff',
+      index: true,
+    },
+    branch: {
+      type: String,
+      trim: true,
+      default: 'Main',
       index: true,
     },
     isActive: {

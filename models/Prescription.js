@@ -24,6 +24,12 @@ const prescriptionSchema = new mongoose.Schema(
       default: Date.now,
       index: true,
     },
+    branch: {
+      type: String,
+      trim: true,
+      default: 'Main',
+      index: true,
+    },
   },
   {
     timestamps: true,

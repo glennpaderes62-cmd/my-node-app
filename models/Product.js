@@ -63,6 +63,12 @@ const productSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    branch: {
+      type: String,
+      trim: true,
+      default: 'Main',
+      index: true,
+    },
   },
   {
     timestamps: true,

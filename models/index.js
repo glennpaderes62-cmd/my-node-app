@@ -1,5 +1,6 @@
 module.exports = {
   User: require('./User'),
+  Branch: require('./Branch'),
   Product: require('./Product'),
   PriceLog: require('./PriceLog'),
   Delivery: require('./Delivery'),

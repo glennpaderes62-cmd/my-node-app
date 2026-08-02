@@ -1,6 +1,6 @@
 const express = require('express');
 const { Setting, User, UserPermission } = require('../models');
-const { isAuthenticated } = require('../middleware/auth');
+const { isAuthenticated, isSuperadmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -99,9 +99,8 @@ router.post('/update-user-access', isAuthenticated, async (req, res) => {
 module.exports = router;
 
 // Superadmin actions: delete user, sale, product
-router.post('/delete-user', isAuthenticated, async (req, res) => {
+router.post('/delete-user', isAuthenticated, isSuperadmin, async (req, res) => {
   try {
-    if (String(req.session.role || '').toLowerCase() !== 'superadmin') return res.status(403).json({ success: false, message: 'Forbidden' });
     const { username } = req.body;
     if (!username) return res.status(400).json({ success: false, message: 'Missing username' });
     await User.deleteOne({ username: String(username).trim().toLowerCase() });
@@ -113,9 +112,8 @@ router.post('/delete-user', isAuthenticated, async (req, res) => {
   }
 });
 
-router.post('/delete-sale', isAuthenticated, async (req, res) => {
+router.post('/delete-sale', isAuthenticated, isSuperadmin, async (req, res) => {
   try {
-    if (String(req.session.role || '').toLowerCase() !== 'superadmin') return res.status(403).json({ success: false, message: 'Forbidden' });
     const { saleId } = req.body;
     if (!saleId) return res.status(400).json({ success: false, message: 'Missing sale id' });
     const { Sale } = require('../models');
@@ -127,9 +125,8 @@ router.post('/delete-sale', isAuthenticated, async (req, res) => {
   }
 });
 
-router.post('/delete-product', isAuthenticated, async (req, res) => {
+router.post('/delete-product', isAuthenticated, isSuperadmin, async (req, res) => {
   try {
-    if (String(req.session.role || '').toLowerCase() !== 'superadmin') return res.status(403).json({ success: false, message: 'Forbidden' });
     const { productId } = req.body;
     if (!productId) return res.status(400).json({ success: false, message: 'Missing product id' });
     const { Product } = require('../models');

@@ -64,6 +64,12 @@ const saleSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    branch: {
+      type: String,
+      trim: true,
+      default: 'Main',
+      index: true,
+    },
     soldAt: {
       type: Date,
       default: Date.now,
