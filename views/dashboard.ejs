@@ -219,6 +219,7 @@
         </h2>
         <div class="user-info">
             <span class="clock" id="live-clock"></span>
+            <span style="font-weight:600; margin-right:10px;"><%= settings && settings.app_name ? settings.app_name : '' %></span>
             <span>Cashier: <strong><%= user %></strong></span>
             <a href="/logout">Log Out</a>
         </div>
@@ -234,8 +235,8 @@
             <% const firstAllowedPage = activeAllowedPages.length > 0 ? activeAllowedPages[0] : null; %>
             <% const menuItems = [
                 { key: 'pos', label: '🛒 Point of Sale' },
-                { key: 'inventory', label: '📦 Imbentaryo & Produkto' },
-                { key: 'prescriptions', label: '📋 Reseta (Rx)' },
+                { key: 'inventory', label: '📦 Inventory & Products' },
+                { key: 'prescriptions', label: '📋 Prescriptions (Rx)' },
                 { key: 'sales', label: '📊 Sales History' },
                 { key: 'admin', label: '⚙️ Admin Branding' },
                 { key: 'users', label: '👥 User Access' }
@@ -274,20 +275,25 @@
                                 <button class="key-btn" onclick="appendKey('2')">2</button>
                                 <button class="key-btn" onclick="appendKey('3')">3</button>
                                 <button class="key-btn action" id="btn-qty" onclick="setMode('qty')">Qty</button>
+
                                 <button class="key-btn" onclick="appendKey('4')">4</button>
                                 <button class="key-btn" onclick="appendKey('5')">5</button>
                                 <button class="key-btn" onclick="appendKey('6')">6</button>
                                 <button class="key-btn action" id="btn-disc" onclick="setMode('disc')">Disc</button>
+
                                 <button class="key-btn" onclick="appendKey('7')">7</button>
                                 <button class="key-btn" onclick="appendKey('8')">8</button>
                                 <button class="key-btn" onclick="appendKey('9')">9</button>
                                 <button class="key-btn action" id="btn-price" onclick="setMode('price')">Price</button>
+
                                 <button class="key-btn" onclick="clearCartInput()">C</button>
-                                <button class="key-btn action" onclick="voidSelectedItem()">Void Item</button>
-                                <button class="key-btn action" onclick="clearCart()">Clear Cart</button>
                                 <button class="key-btn" onclick="appendKey('0')">0</button>
                                 <button class="key-btn" onclick="appendKey('.')">.</button>
+                                <button class="key-btn action" onclick="voidSelectedItem()">Void</button>
+
                                 <button class="key-btn action" onclick="deleteLastInput()">⌫</button>
+                                <button class="key-btn action" onclick="clearCart()">Clear Cart</button>
+                                <div></div>
                                 <button class="key-btn payment" onclick="openPaymentModal()">PAYMENT / CHECKOUT</button>
                             </div>
                         </div>
@@ -355,8 +361,32 @@
                     <div class="card">
                         <div class="registry-toolbar"><div><h3 style="margin:0;">Registry List</h3><small style="color:#64748b;">Margin = (Price − Cost) ÷ Price. Possible revenue is projected profit from available stock.</small></div><input id="registry-search" class="registry-search" type="search" placeholder="Search item, SKU, barcode..." oninput="filterRegistryRows()"></div>
                         <div class="registry-table-wrap"><table class="registry-table"><thead><tr><th>Item</th><th>SKU</th><th>Barcode</th><th>Description</th><th class="amount">Cost</th><th class="amount">Price</th><th class="amount">Margin %</th><th class="amount">Possible Revenue</th><th>Price Update</th><th></th></tr></thead><tbody id="registry-rows">
-                        <% products.forEach(product => { const cost = Number(product.cost) || 0; const price = Number(product.price) || 0; const margin = price ? ((price - cost) / price) * 100 : 0; const possibleRevenue = (price - cost) * (Number(product.stock) || 0); %>
-                            <tr data-registry-search="<%= [product.name, product.sku, product.barcode, product.description].join(' ').toLowerCase() %>"><td><strong><%= product.name %></strong><br><small style="color:#64748b;">Stock: <%= product.stock %></small></td><td><%= product.sku || '—' %></td><td><%= product.barcode || '—' %></td><td><%= product.description || '—' %></td><td class="amount">PHP <%= Number(cost).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td><td class="amount">PHP <%= Number(price).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td><td class="amount"><%= margin.toFixed(1) %>%</td><td class="amount">PHP <%= Number(possibleRevenue).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td><td><input id="price-<%= product.id %>" class="registry-price-input" type="number" min="0" step="0.01" value="<%= price.toFixed(2) %>"><button class="registry-update-btn" type="button" onclick="updateRegistryPrice(<%= product.id %>)">Update</button></td><td><button class="registry-btn" type="button" onclick="openPriceUpdateModal('<%= product.id %>', '<%= product.name.replace(/'/g, "\\'") %>', '<%= price.toFixed(2) %>')">Edit</button></td></tr>
+                        <% products.forEach(product => { 
+                            const cost = Number(product.cost) || 0; 
+                            const price = Number(product.price) || 0; 
+                            const margin = price ? ((price - cost) / price) * 100 : 0; 
+                            const possibleRevenue = (price - cost) * (Number(product.stock) || 0);
+                        %>
+                            <tr data-registry-search="<%= [product.name, product.sku, product.barcode, product.description].join(' ').toLowerCase() %>">
+                                <td><strong><%= product.name %></strong><br><small style="color:#64748b;">Stock: <%= product.stock %></small></td>
+                                <td><%= product.sku || '—' %></td>
+                                <td><%= product.barcode || '—' %></td>
+                                <td><%= product.description || '—' %></td>
+                                <td class="amount">PHP <%= Number(cost).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td>
+                                <td class="amount">PHP <%= Number(price).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td>
+                                <td class="amount"><%= margin.toFixed(1) %>%</td>
+                                <td class="amount">PHP <%= Number(possibleRevenue).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td>
+                                <td>
+                                    <input id="price-<%= product.id %>" class="registry-price-input" type="number" min="0" step="0.01" value="<%= price.toFixed(2) %>">
+                                    <button class="registry-update-btn" type="button" onclick="updateRegistryPrice('<%= product.id %>')">Update</button>
+                                </td>
+                                <td>
+                                    <button class="registry-btn" type="button" onclick="openPriceUpdateModal('<%= product.id %>', '<%= product.name.replace(/'/g, "\\'") %>', '<%= price.toFixed(2) %>')">Edit</button>
+                                    <% if (role === 'superadmin') { %>
+                                        <button class="registry-btn" type="button" style="background:#ef4444;color:#fff;margin-left:6px;" onclick="deleteProduct('<%= product.id %>')">Delete</button>
+                                    <% } %>
+                                </td>
+                            </tr>
                         <% }) %>
                         </tbody></table></div>
                     </div>
@@ -520,8 +550,9 @@
                         <h2 class="admin-dashboard-title">Admin Dashboard</h2>
                         <p class="admin-dashboard-subtitle">Pamahalaan ang branding at user accounts ng system.</p>
                         <div class="admin-tabs" role="tablist" aria-label="Admin dashboard sections">
-                            <button type="button" class="admin-tab active" role="tab" aria-selected="true" onclick="switchAdminTab('branding', this)">Branding</button>
-                            <button type="button" class="admin-tab" role="tab" aria-selected="false" onclick="switchAdminTab('users', this)">Create User</button>
+                                            <button type="button" class="admin-tab active" role="tab" aria-selected="true" onclick="switchAdminTab('branding', this)">Branding</button>
+                                        </div>
+                                        <div id="admin-tab-branding" class="admin-tab-panel active" role="tabpanel">
                         </div>
                         <div id="admin-tab-branding" class="admin-tab-panel active" role="tabpanel">
                             <h3>App Branding</h3>
@@ -529,6 +560,8 @@
                             <form action="/admin/branding" method="POST">
                                 <input type="text" name="app_name" class="form-control" placeholder="App Name" value="<%= settings.app_name || '' %>" required>
                                 <input type="url" name="app_logo_url" class="form-control" placeholder="Logo Image URL" value="<%= settings.app_logo_url || '' %>">
+                                <input type="text" name="app_address" class="form-control" placeholder="Company Address" value="<%= settings.app_address || '' %>">
+                                <input type="text" name="app_tin" class="form-control" placeholder="TIN / Tax ID" value="<%= settings.app_tin || '' %>">
                                 <div style="display:flex; gap:12px; align-items:center; margin-bottom:16px;">
                                     <% if (settings.app_logo_url) { %>
                                         <div style="width:80px; height:80px; border:1px solid #cbd5e1; border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#fff;">
@@ -536,7 +569,7 @@
                                         </div>
                                     <% } %>
                                     <div style="color:#475569; font-size:0.95rem;">
-                                        I-paste ang logo URL para lumabas sa tuktok na header.
+                                        Paste the logo URL to appear in the top header. You can also set the Company Address and TIN here.
                                     </div>
                                 </div>
                                 <button type="submit" class="btn" style="background: #2563eb; width: 100%;">Save Branding</button>
@@ -545,24 +578,7 @@
                         <div id="admin-tab-users" class="admin-tab-panel" role="tabpanel">
                             <h3>Create User</h3>
                             <p style="margin-top: 0; color: #475569;">Magdagdag ng bagong user at piliin ang mga module na pwedeng ma-access.</p>
-                            <form action="/admin/create-user" method="POST">
-                                <input type="text" name="username" class="form-control" placeholder="Username" required>
-                                <input type="password" name="password" class="form-control" placeholder="Password" required>
-                                <select name="role" class="form-control" required>
-                                    <option value="cashier">Cashier</option>
-                                    <option value="pharmacist">Pharmacist</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px;">
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="pos"> Point of Sale</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="inventory"> Imbentaryo</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="prescriptions"> Reseta</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="sales"> Sales History</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="admin"> Admin Branding</label>
-                                    <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="users"> User Management</label>
-                                </div>
-                                <button type="submit" class="btn" style="background: #16a34a; width: 100%;">Create User</button>
-                            </form>
+                            <!-- Create User moved to User Access pane -->
                         </div>
                     </div>
                 </div>
@@ -574,7 +590,33 @@
                 <div class="module-content">
                     <div class="card" style="display:grid; gap:20px; max-width: 900px; margin: 0 auto;">
                         <div style="background:#ffffff; padding:20px; border-radius:12px; border:1px solid #e2e8f0;">
-                            <h3>Users at Access</h3>
+                            <h3>Users & Access</h3>
+                            <div style="background:#ffffff; padding:16px; border-radius:8px; margin-bottom:14px; border:1px solid #e6eef8;">
+                                <h4 style="margin:0 0 8px 0;">Create User</h4>
+                                <form action="/admin/create-user" method="POST" style="display:grid; gap:8px;">
+                                    <input type="text" name="username" class="form-control" placeholder="Username" required>
+                                    <input type="password" name="password" class="form-control" placeholder="Password" required>
+                                    <select name="role" class="form-control" required>
+                                        <option value="cashier">Cashier</option>
+                                        <option value="pharmacist">Pharmacist</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:8px;">
+                                        <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="pos"> Point of Sale</label>
+                                        <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="inventory"> Inventory</label>
+                                        <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="prescriptions"> Prescriptions</label>
+                                        <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="sales"> Sales History</label>
+                                        <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="admin"> Admin Branding</label>
+                                        <label style="display:flex; gap: 8px; align-items:center;"><input type="checkbox" name="allowed_pages" value="users"> User Management</label>
+                                    </div>
+                                    <button type="submit" class="btn" style="background: #16a34a; width: 100%;">Create User</button>
+                                </form>
+                            </div>
+                                <div style="margin-top:12px; margin-bottom:8px; display:flex; gap:8px; align-items:center;">
+                                    <input id="user-search" class="form-control" placeholder="Search users by username or role...">
+                                    <button class="btn" type="button" onclick="filterUsers()">Search</button>
+                                    <button class="btn" type="button" onclick="resetUserFilter()">Reset</button>
+                                </div>
                             <% const permissionLabels = {
                                 pos: 'Point of Sale',
                                 inventory: 'Imbentaryo',
@@ -589,6 +631,7 @@
                                         <th>Username</th>
                                         <th>Role</th>
                                         <th>Allowed Modules</th>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -599,15 +642,20 @@
                                     <% } else { %>
                                         <% shownUsers.forEach(u => { %>
                                             <tr>
-                                                <td><%= u.username %></td>
-                                                <td><%= u.role %></td>
-                                                <td>
-                                                    <% const userPages = shownPermissions[u.username] || [];
-                                                       const pageNames = userPages.map(p => permissionLabels[p] || p);
-                                                    %>
-                                                    <%= pageNames.length ? pageNames.join(', ') : (['admin', 'superadmin'].includes(u.role) ? 'All Access' : 'Walang access') %>
-                                                </td>
-                                            </tr>
+                                                    <td><%= u.username %></td>
+                                                    <td><%= u.role %></td>
+                                                    <td>
+                                                        <% const userPages = shownPermissions[u.username] || [];
+                                                           const pageNames = userPages.map(p => permissionLabels[p] || p);
+                                                        %>
+                                                        <%= pageNames.length ? pageNames.join(', ') : (['admin', 'superadmin'].includes(u.role) ? 'All Access' : 'No access') %>
+                                                    </td>
+                                                    <td>
+                                                        <% if (role === 'superadmin') { %>
+                                                            <button class="btn" type="button" onclick="deleteUser('<%= u.username %>')" style="background:#ef4444;color:#fff;">Delete</button>
+                                                        <% } %>
+                                                    </td>
+                                                </tr>
                                         <% }) %>
                                     <% } %>
                                 </tbody>
@@ -675,22 +723,35 @@
             <% if (activeAllowedPages.includes('sales')) { %>
             <div id="pane-sales" class="module-pane <%= firstAllowedPage === 'sales' ? 'active' : '' %>">
                 <div class="module-content">
-                    <div class="card" style="max-width: 900px; margin: 0 auto;">
-                        <h3>Sales History & Logs <span style="font-size: 0.8rem; color: #64748b; font-weight: normal;">(Click a row to view the receipt)</span></h3>
-                        <table>
-                            <thead><tr><th>Sale ID</th><th>Total Amount</th><th>Cashier</th><th>Date</th></tr></thead>
-                            <tbody>
-                                <% sales.forEach(s => { %>
-                                    <tr class="sales-row" onclick='viewReceipt(<%- s.receipt_data %>)'>
-                                        <td>#<%= s.id %></td>
-                                        <td style="color: #27ae60; font-weight: bold;">₱<%= Number(s.total).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td>
-                                        <td><%= s.cashier %></td>
-                                        <td><%= s.date %></td>
-                                    </tr>
-                                <% }) %>
-                            </tbody>
-                        </table>
-                    </div>
+                            <div class="card" style="max-width: 1000px; margin: 0 auto;">
+                                <h3>Sales History & Logs <span style="font-size: 0.8rem; color: #64748b; font-weight: normal;">(Click a row to view the receipt)</span></h3>
+                                <div style="display:flex; gap:8px; margin:10px 0 14px 0; align-items:center;">
+                                    <input id="sales-search" class="form-control" placeholder="Search sale id, cashier, or date...">
+                                    <input id="sales-from" type="date" class="form-control" style="max-width:160px;">
+                                    <input id="sales-to" type="date" class="form-control" style="max-width:160px;">
+                                    <button class="btn" type="button" onclick="filterSales()" style="background:#2563eb;color:#fff;">Search</button>
+                                    <button class="btn" type="button" onclick="resetSalesFilter()">Reset</button>
+                                </div>
+                                <table>
+                                    <thead><tr><th>Sale ID</th><th>Total Amount</th><th>Cashier</th><th>Date</th><th></th></tr></thead>
+                                    <tbody id="sales-rows">
+                                        <% sales.forEach(s => { %>
+                                            <tr class="sales-row" data-sale-search="<%= [s.id, s.cashier, s.date].join(' ').toLowerCase() %>">
+                                                <td>#<%= s.id %></td>
+                                                <td style="color: #27ae60; font-weight: bold;">₱<%= Number(s.total).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) %></td>
+                                                <td><%= s.cashier %></td>
+                                                <td><%= s.date %></td>
+                                                <td style="white-space:nowrap;">
+                                                    <button class="btn" type="button" onclick='viewReceipt(<%- s.receipt_data %>)'>View</button>
+                                                    <% if (role === 'superadmin') { %>
+                                                        <button class="btn" type="button" onclick="deleteSale('<%= s.id %>')" style="background:#ef4444;color:#fff;margin-left:6px;">Delete</button>
+                                                    <% } %>
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            </div>
                 </div>
             </div>
             <% } %>
@@ -737,6 +798,7 @@
     <% const permissionsData = typeof userPermissions !== 'undefined' && userPermissions ? userPermissions : {}; %>
     <script>
         const permissionsData = <%- JSON.stringify(permissionsData) %>;
+        const appSettings = <%- JSON.stringify(settings || {}) %>;
 
         const userAccessSelect = document.getElementById('user-access-select');
         if (userAccessSelect) {
@@ -794,9 +856,9 @@
         <div class="modal-card" style="width: 420px; font-family: 'Courier New', Courier, monospace; max-height: 90vh; overflow-y: auto;">
             <div id="receipt-content" style="padding: 15px; color: #000; font-size: 0.9rem; line-height: 1.5; background: #fff;">
                 <div style="text-align: center; margin-bottom: 12px;">
-                    <h2 style="margin: 0; font-size: 1.3rem; font-weight: bold;">RxPOS PHARMACY</h2>
-                    <p style="margin: 2px 0; font-size: 0.8rem;">123 Health St., Biñan Laguna</p>
-                    <p style="margin: 2px 0; font-size: 0.8rem;">VAT Reg. TIN: 000-123-456-000</p>
+                    <h2 style="margin: 0; font-size: 1.3rem; font-weight: bold;"><%= settings && settings.app_name ? settings.app_name : 'RxPOS PHARMACY' %></h2>
+                    <p style="margin: 2px 0; font-size: 0.8rem;"><%= settings && settings.app_address ? settings.app_address : '123 Health St., Biñan Laguna' %></p>
+                    <p style="margin: 2px 0; font-size: 0.8rem;"><%= settings && settings.app_tin ? ('TIN: ' + settings.app_tin) : 'VAT Reg. TIN: 000-123-456-000' %></p>
                     <p style="margin: 2px 0; font-size: 0.8rem;">SN: POS-9988-PH</p>
                 </div>
                 <div style="border-bottom: 1px dashed #000; margin-bottom: 10px; padding-bottom: 8px;">
@@ -1101,6 +1163,27 @@
             document.getElementById('receiptModal').style.display = 'flex';
         }
 
+        function buildPrintableReceipt(rec) {
+            const s = appSettings || {};
+            const headerName = s.app_name || 'RxPOS';
+            const headerAddress = s.app_address || '';
+            const headerTin = s.app_tin ? ('TIN: ' + s.app_tin) : '';
+            let html = `<div style="max-width:420px;margin:auto;font-family:monospace;font-size:12px;color:#111">`;
+            html += `<h2 style="text-align:center;margin:0;">${headerName}</h2>`;
+            if (headerAddress) html += `<div style="text-align:center;margin-bottom:6px;">${headerAddress}</div>`;
+            if (headerTin) html += `<div style="text-align:center;margin-bottom:8px;">${headerTin}</div>`;
+            html += `<div>Receipt: ${rec.saleId}</div><div>Date: ${rec.date}</div><div>Cashier: ${rec.cashier}</div><hr/>`;
+            html += `<table style="width:100%;font-size:12px;">`;
+            rec.cart.forEach(item => {
+                const subtotal = ((item.price * item.qty) - (item.discount || 0));
+                html += `<tr><td>${item.name} x${item.qty}</td><td style="text-align:right">₱${Number(subtotal).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;
+            });
+            html += `</table><hr/>`;
+            html += `<div style="display:flex;justify-content:space-between;"><strong>Total</strong><strong>₱${Number(rec.total).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div>`;
+            html += `</div>`;
+            return html;
+        }
+
         function viewReceipt(rec) {
             showReceiptModal(rec);
         }
@@ -1108,6 +1191,62 @@
         function closeReceiptModal() {
             document.getElementById('receiptModal').style.display = 'none';
             location.reload();
+        }
+
+        async function deleteSale(id) {
+            if (!confirm('Delete sale ' + id + ' ?')) return;
+            const res = await fetch('/admin/delete-sale', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ saleId: id }) });
+            const j = await res.json();
+            if (j.success) location.reload(); else alert(j.message || 'Unable to delete');
+        }
+
+        async function deleteUser(username) {
+            if (!confirm('Delete user ' + username + ' ?')) return;
+            const res = await fetch('/admin/delete-user', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ username }) });
+            const j = await res.json();
+            if (j.success) location.reload(); else alert(j.message || 'Unable to delete');
+        }
+
+        function filterSales(){
+            const q = (document.getElementById('sales-search').value||'').trim().toLowerCase();
+            const from = document.getElementById('sales-from').value;
+            const to = document.getElementById('sales-to').value;
+            document.querySelectorAll('#sales-rows tr').forEach(row => {
+                const text = (row.dataset.saleSearch||'');
+                const date = row.children[3] ? row.children[3].innerText : '';
+                let visible = true;
+                if (q && !text.includes(q)) visible = false;
+                if (from && date && date < from) visible = false;
+                if (to && date && date > to) visible = false;
+                row.style.display = visible ? '' : 'none';
+            });
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('Delete product?')) return;
+            const res = await fetch('/admin/delete-product', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ productId: id }) });
+            const j = await res.json();
+            if (j.success) location.reload(); else alert(j.message || 'Unable to delete product');
+        }
+
+        function resetSalesFilter(){
+            document.getElementById('sales-search').value = '';
+            document.getElementById('sales-from').value = '';
+            document.getElementById('sales-to').value = '';
+            filterSales();
+        }
+
+        function filterUsers(){
+            const q = (document.getElementById('user-search').value||'').trim().toLowerCase();
+            document.querySelectorAll('#pane-users table tbody tr').forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = q && !text.includes(q) ? 'none' : '';
+            });
+        }
+
+        function resetUserFilter(){
+            document.getElementById('user-search').value = '';
+            filterUsers();
         }
 
         function printReceipt() {

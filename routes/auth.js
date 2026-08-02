@@ -3,8 +3,17 @@ const { User } = require('../models');
 
 const router = express.Router();
 
-router.get('/login', (_req, res) => {
-  res.render('login', { error: null });
+router.get('/login', async (_req, res) => {
+  try {
+    const { Setting } = require('../models');
+    const settingsRows = await Setting.find().lean();
+    const settings = {};
+    settingsRows.forEach(r => { settings[r.key] = r.value; });
+    res.render('login', { error: null, settings });
+  } catch (err) {
+    console.error('Login render settings error:', err.message);
+    res.render('login', { error: null });
+  }
 });
 
 
@@ -27,15 +36,25 @@ console.log("TOTAL USERS:", await User.countDocuments());
 
 
     if (!user) {
+      const { Setting } = require('../models');
+      const settingsRows = await Setting.find().lean();
+      const settings = {};
+      settingsRows.forEach(r => { settings[r.key] = r.value; });
       return res.render('login', { 
-        error: 'User not found' 
+        error: 'User not found',
+        settings
       });
     }
 
 
     if (user.password !== password) {
+      const { Setting } = require('../models');
+      const settingsRows = await Setting.find().lean();
+      const settings = {};
+      settingsRows.forEach(r => { settings[r.key] = r.value; });
       return res.render('login', { 
-        error: 'Wrong password' 
+        error: 'Wrong password',
+        settings
       });
     }
 
@@ -51,9 +70,15 @@ console.log("TOTAL USERS:", await User.countDocuments());
 
     console.error('Login error:', error.message);
 
-    res.render('login', { 
-      error: 'Unable to sign in right now. Please try again.' 
-    });
+    try {
+      const { Setting } = require('../models');
+      const settingsRows = await Setting.find().lean();
+      const settings = {};
+      settingsRows.forEach(r => { settings[r.key] = r.value; });
+      res.render('login', { error: 'Unable to sign in right now. Please try again.', settings });
+    } catch (_) {
+      res.render('login', { error: 'Unable to sign in right now. Please try again.' });
+    }
 
   }
 });

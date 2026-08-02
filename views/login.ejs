@@ -21,7 +21,10 @@
 </head>
 <body>
     <div class="login-card">
-        <h2>💊 RxPOS Login</h2>
+        <h2>💊 <%= settings && settings.app_name ? settings.app_name : 'RxPOS' %> Login</h2>
+        <% if (settings && (settings.app_address || settings.app_tin)) { %>
+            <div style="font-size:0.9rem; color:#64748b; text-align:center; margin-bottom:10px;"><%= settings.app_address || '' %><% if (settings.app_tin) { %> · TIN: <%= settings.app_tin %><% } %></div>
+        <% } %>
         <% if (error) { %>
             <div class="error-msg"><%= error %></div>
         <% } %>
