@@ -16,6 +16,7 @@ router.post('/login', async (req, res) => {
     console.log("INPUT USER:", username);
     console.log("INPUT PASSWORD:", password);
 
+console.log("TOTAL USERS:", await User.countDocuments());
 
     const user = await User.findOne({
       username: String(username || '').trim().toLowerCase()
